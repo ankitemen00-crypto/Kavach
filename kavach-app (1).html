@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kavach — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14;
+    --surface:#131922;
+    --surface-2:#1A222D;
+    --border:#232C38;
+    --text:#EDF2F7;
+    --muted:#7C8A9A;
+    --mint:#3DDC97;
+    --mint-dim:#1F5C42;
+    --amber:#F2B84B;
+    --danger:#E5484D;
+    --danger-dim:#3A1E20;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #101722 0%, #05070A 70%);
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Inter', sans-serif;
+    color:var(--text);
+    padding:24px 12px;
+  }
+  .phone{
+    width:390px; max-width:100%;
+    height:800px; max-height:92vh;
+    background:var(--bg);
+    border-radius:36px;
+    border:1px solid #262F3B;
+    box-shadow:0 40px 80px -20px rgba(0,0,0,0.7), 0 0 0 8px #05070A, 0 0 0 9px #2A3441;
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+  }
+  .statusbar{
+    height:34px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 22px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted);
+  }
+  .screen{
+    flex:1 1 auto; overflow-y:auto; position:relative;
+    display:none;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .screen::-webkit-scrollbar{display:none;}
+  .screen.active{display:flex; flex-direction:column;}
+
+  /* ---------- LOCK SCREEN ---------- */
+  #screen-lock{ justify-content:space-between; padding:40px 28px 32px; text-align:center; }
+  .lock-top{ margin-top:30px; }
+  .shield-wrap{ position:relative; width:96px; height:96px; margin:0 auto 18px; }
+  .shield-ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:2px solid var(--mint-dim);
+  }
+  .shield-ring.pulse{ animation:pulse 1.4s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(61,220,151,0.35); }
+    100%{ box-shadow:0 0 0 18px rgba(61,220,151,0); }
+  }
+  .shield-icon{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:700; font-size:15px; color:var(--mint);
+  }
+  .shield-icon svg{ width:42px; height:42px; }
+  .brand{ font-family:'Space Grotesk'; font-weight:700; font-size:26px; letter-spacing:0.5px; }
+  .brand span{ color:var(--mint); }
+  .lock-sub{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .lock-status{ font-size:13px; color:var(--muted); min-height:20px; margin-top:14px; }
+  .lock-status.err{ color:var(--danger); font-weight:600; }
+
+  .pindots{ display:flex; gap:16px; justify-content:center; margin:26px 0 6px; }
+  .pindot{ width:14px; height:14px; border-radius:50%; border:2px solid var(--border); transition:all .15s; }
+  .pindot.filled{ background:var(--mint); border-color:var(--mint); }
+  .pindot.error{ background:var(--danger); border-color:var(--danger); }
+
+  .numpad{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+  .numkey{
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    font-family:'Space Grotesk'; font-size:20px; font-weight:600;
+    height:64px; border-radius:18px; cursor:pointer; transition:background .12s, transform .08s;
+  }
+  .numkey:active{ transform:scale(0.94); background:var(--surface-2); }
+  .numkey.ghost{ background:transparent; border:none; color:var(--muted); font-size:13px; font-family:'Inter'; }
+
+  .lock-methods{ display:flex; gap:10px; justify-content:center; margin-top:18px; }
+  .method-btn{
+    flex:1; background:var(--surface); border:1px solid var(--border); color:var(--muted);
+    padding:10px 6px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .method-btn.active{ color:var(--mint); border-color:var(--mint-dim); background:rgba(61,220,151,0.08); }
+
+  .pattern-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px; justify-content:center; margin:30px auto 10px; width:220px; }
+  .pnode{ width:20px; height:20px; border-radius:50%; border:2px solid var(--border); margin:0 auto; position:relative; }
+  .pnode.on{ background:var(--mint); border-color:var(--mint); box-shadow:0 0 0 6px rgba(61,220,151,0.15); }
+  .pnode.err{ background:var(--danger); border-color:var(--danger); }
+
+  .faceid-box{ margin-top:34px; }
+  .face-circle{
+    width:120px; height:120px; border-radius:50%; margin:0 auto 18px;
+    border:2px dashed var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:36px;
+  }
+  .face-circle.scanning{ border-color:var(--mint); animation:pulse 1s ease-out infinite; }
+  .btn-primary{
+    background:var(--mint); color:#06110B; border:none; font-weight:700; font-family:'Space Grotesk';
+    padding:14px 20px; border-radius:14px; font-size:14px; cursor:pointer; width:100%;
+  }
+  .btn-primary:active{ transform:scale(0.98); }
+
+  /* ---------- APP SHELL ---------- */
+  .topbar{
+    padding:16px 18px 12px; display:flex; align-items:center; justify-content:space-between; flex:0 0 auto;
+    border-bottom:1px solid var(--border);
+  }
+  .topbar h1{ font-family:'Space Grotesk'; font-size:19px; font-weight:700; }
+  .topbar .lockchip{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--mint); background:rgba(61,220,151,0.08); padding:5px 9px; border-radius:20px; border:1px solid var(--mint-dim); }
+  .content{ flex:1; overflow-y:auto; padding:14px 16px 90px; }
+  .content::-webkit-scrollbar{ display:none; }
+
+  .stories-row{ display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--border); -ms-overflow-style:none; scrollbar-width:none; }
+  .stories-row::-webkit-scrollbar{ display:none; }
+  .story{ flex:0 0 auto; text-align:center; width:62px; }
+  .story-ring{ width:58px; height:58px; border-radius:50%; padding:2.5px; background:linear-gradient(135deg,var(--mint),#1E90A0); display:flex; align-items:center; justify-content:center; }
+  .story-ring.seen{ background:var(--border); }
+  .story-avatar{ width:100%; height:100%; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-family:'Space Grotesk'; font-size:16px; }
+  .story-name{ font-size:11px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .reel-card{ border-radius:18px; overflow:hidden; margin-bottom:14px; border:1px solid var(--border); background:var(--surface); }
+  .reel-media{ height:190px; background:linear-gradient(160deg,#1A222D,#0B0F14); display:flex; align-items:center; justify-content:center; font-size:34px; color:var(--muted); position:relative; }
+  .reel-tag{ position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); font-size:10px; padding:4px 8px; border-radius:8px; font-weight:700; letter-spacing:0.5px; }
+  .reel-meta{ padding:10px 14px 14px; }
+  .reel-user{ font-weight:600; font-size:13px; }
+  .reel-cap{ font-size:12px; color:var(--muted); margin-top:3px; }
+
+  .list-row{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+  .avatar{ width:48px; height:48px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:16px; color:#06110B; }
+  .row-main{ flex:1; min-width:0; }
+  .row-title{ font-weight:600; font-size:14px; display:flex; align-items:center; gap:6px; }
+  .row-sub{ font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row-sub.blur{ filter:blur(4px); user-select:none; }
+  .row-time{ font-size:11px; color:var(--muted); flex:0 0 auto; }
+  .lock-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:6px; flex:0 0 auto; }
+  .lock-btn.on{ color:var(--amber); }
+  .badge-locked{ font-size:10px; color:var(--amber); background:rgba(242,184,75,0.1); border:1px solid #5C4A22; padding:2px 6px; border-radius:6px; font-weight:700; }
+
+  .group-avatars{ display:flex; width:48px; height:48px; flex:0 0 auto; position:relative; }
+  .group-avatars .avatar{ width:32px; height:32px; position:absolute; font-size:12px; border:2px solid var(--bg); }
+  .group-avatars .avatar:nth-child(1){ top:0; left:0; z-index:2; }
+  .group-avatars .avatar:nth-child(2){ bottom:0; right:0; z-index:1; }
+
+  .call-icon{ width:40px; height:40px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex:0 0 auto; font-size:15px; }
+  .call-type{ font-size:11px; }
+  .call-type.missed{ color:var(--danger); }
+
+  /* bottom nav */
+  .bottomnav{
+    position:absolute; bottom:0; left:0; right:0; height:72px;
+    background:rgba(19,25,34,0.92); backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-around;
+    padding-bottom:8px;
+  }
+  .navbtn{ background:none; border:none; color:var(--muted); font-size:20px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; flex:1; }
+  .navbtn span{ font-size:10px; font-weight:600; }
+  .navbtn.active{ color:var(--mint); }
+
+  /* chat detail */
+  #screen-chatdetail .content{ display:flex; flex-direction:column; padding-bottom:14px; }
+  .chatdetail-header{ display:flex; align-items:center; gap:10px; padding:10px 4px 16px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+  .backbtn{ background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; }
+  .msgs{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .msg{ max-width:75%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.4; }
+  .msg.in{ background:var(--surface-2); align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.out{ background:var(--mint-dim); align-self:flex-end; border-bottom-right-radius:4px; color:#DFFFF1; }
+  .msg-input-row{ display:flex; gap:8px; margin-top:14px; }
+  .msg-input{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:11px 16px; color:var(--text); font-size:13px; }
+  .sendbtn{ background:var(--mint); border:none; width:42px; height:42px; border-radius:50%; font-size:16px; cursor:pointer; }
+
+  /* call screen */
+  #screen-call .content{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; height:100%; }
+  .call-avatar-big{ width:110px; height:110px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:38px; font-family:'Space Grotesk'; font-weight:700; margin-bottom:16px; }
+  .call-name{ font-family:'Space Grotesk'; font-size:20px; font-weight:700; }
+  .call-status{ color:var(--mint); font-size:13px; margin-top:6px; }
+  .call-controls{ display:flex; gap:20px; margin-top:44px; }
+  .ctrlbtn{ width:56px; height:56px; border-radius:50%; background:var(--surface-2); border:1px solid var(--border); font-size:20px; cursor:pointer; }
+  .ctrlbtn.end{ background:var(--danger); }
+
+  /* settings */
+  .settings-section{ margin-bottom:22px; }
+  .settings-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:8px; font-weight:700; }
+  .settings-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row .desc{ color:var(--muted); font-size:11.5px; margin-top:2px; }
+
+  /* modal */
+  .modal-overlay{ position:absolute; inset:0; background:rgba(3,5,8,0.72); backdrop-filter:blur(3px); display:none; align-items:flex-end; z-index:50; }
+  .modal-overlay.active{ display:flex; }
+  .modal-sheet{ width:100%; background:var(--surface); border-radius:24px 24px 0 0; padding:26px 26px 34px; border:1px solid var(--border); border-bottom:none; text-align:center; }
+  .modal-title{ font-family:'Space Grotesk'; font-weight:700; font-size:17px; }
+  .modal-sub{ color:var(--muted); font-size:12.5px; margin-top:6px; }
+  .modal-close{ position:absolute; top:16px; right:20px; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+
+  .attempts-warn{ font-size:12px; color:var(--amber); margin-top:10px; }
+  .attempts-warn.danger{ color:var(--danger); font-weight:700; }
+
+  .toast{
+    position:absolute; top:44px; left:50%; transform:translateX(-50%);
+    background:var(--surface-2); border:1px solid var(--border); padding:10px 18px; border-radius:12px;
+    font-size:12.5px; z-index:99; opacity:0; transition:opacity .25s, top .25s; pointer-events:none;
+    display:flex; align-items:center; gap:8px; max-width:80%;
+  }
+  .toast.show{ opacity:1; top:56px; }
+  .toast.danger{ border-color:#5C2226; color:#FFC9CC; background:var(--danger-dim); }
+
+  .empty-hint{ text-align:center; color:var(--muted); font-size:12px; margin-top:60px; padding:0 20px; }
+
+  /* ---------- REELS ---------- */
+  #screen-reels{ padding:0; }
+  .reels-feed{
+    height:100%; width:100%; overflow-y:scroll; scroll-snap-type:y mandatory;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .reels-feed::-webkit-scrollbar{ display:none; }
+  .reel-slide{
+    height:100%; width:100%; scroll-snap-align:start; position:relative;
+    background:linear-gradient(200deg,#1A222D 0%,#0B0F14 55%,#05070A 100%);
+    display:flex; align-items:flex-end; flex-shrink:0;
+  }
+  .reel-slide .playicon{
+    position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:40px; color:rgba(237,242,247,0.18);
+  }
+  .reel-side{
+    position:absolute; right:12px; bottom:110px; display:flex; flex-direction:column; align-items:center; gap:22px;
+  }
+  .reel-side .ricon{ text-align:center; font-size:22px; }
+  .reel-side .ricon span{ display:block; font-size:10px; color:var(--muted); margin-top:3px; font-weight:600; }
+  .reel-info{ padding:0 70px 26px 18px; width:100%; }
+  .reel-info .ruser{ font-weight:700; font-family:'Space Grotesk'; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .reel-info .rcap{ font-size:12.5px; color:#C7D0DA; margin-top:6px; }
+  .reel-info .rtag{ display:inline-block; background:rgba(61,220,151,0.12); color:var(--mint); font-size:10px; padding:3px 9px; border-radius:8px; margin-bottom:8px; font-weight:700; letter-spacing:0.4px; }
+  .ravatar{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#06110B; }
+
+  /* ---------- SEARCH GRID ---------- */
+  .search-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .search-card{ border-radius:14px; overflow:hidden; background:var(--surface); border:1px solid var(--border); cursor:pointer; }
+  .search-thumb{ height:150px; position:relative; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:26px; color:#06110B; }
+  .search-play{ position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+  .search-locked{ position:absolute; top:8px; left:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .search-meta{ padding:9px 10px 11px; }
+  .search-name{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .search-sub{ font-size:11px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .search-section-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); font-weight:700; margin:14px 0 8px; }
+  .search-section-label:first-child{ margin-top:0; }
+
+  /* ===== Auth Gate + Admin Dashboard styles (namespaced under #authGate) ===== */
+  #authGate{ width:100%; }
+  #authGate .wrap { width:430px; max-width:100%; }
+  #authGate /* ---- shared card ---- */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:32px 26px; }
+  #authGate .brand { font-family:'Space Grotesk'; font-weight:700; font-size:22px; text-align:center; }
+  #authGate .brand span { color:var(--mint); }
+  #authGate .gate-sub { color:var(--muted); font-size:13px; margin-top:6px; text-align:center; }
+  #authGate /* ---- auth tabs ---- */
+  .authtabs { display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:4px; margin-top:22px; }
+  #authGate .authtab { flex:1; text-align:center; padding:9px 6px; border-radius:10px; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; font-family:'Space Grotesk'; }
+  #authGate .authtab.active { background:var(--mint); color:#06110B; }
+  #authGate /* ---- form fields ---- */
+  .field { margin-top:16px; }
+  #authGate .field label { font-size:11.5px; color:var(--muted); font-weight:600; display:block; margin-bottom:6px; }
+  #authGate .field input {
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter'; font-size:13.5px; padding:12px 13px; border-radius:12px; outline:none;
+  }
+  #authGate .field input:focus { border-color:var(--mint-dim); }
+  #authGate .phone-input { display:flex; gap:8px; }
+  #authGate .phone-input .cc { width:60px; flex:0 0 auto; text-align:center; }
+  #authGate .field-err { font-size:11px; color:var(--danger); margin-top:5px; font-weight:600; min-height:14px; }
+  #authGate .btn-primary {
+    background:var(--mint); color:#06110B; border:none; font-weight:700; font-family:'Space Grotesk';
+    padding:13px 20px; border-radius:14px; font-size:14px; cursor:pointer; width:100%; margin-top:18px;
+  }
+  #authGate .btn-primary:active { transform:scale(.98); }
+  #authGate .btn-primary.ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+  #authGate .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+  #authGate .divider { display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--muted); font-size:11px; }
+  #authGate .divider::before, #authGate .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+  #authGate .btn-google {
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter'; font-weight:600; font-size:13px; padding:12px; border-radius:14px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  #authGate .btn-google:active { transform:scale(.98); }
+  #authGate .gicon { width:18px; height:18px; border-radius:50%; background:conic-gradient(#4285F4 0turn .25turn,#34A853 .25turn .5turn,#FBBC05 .5turn .75turn,#EA4335 .75turn 1turn); flex:0 0 auto; }
+  #authGate .link-row { text-align:center; margin-top:14px; font-size:12px; color:var(--muted); }
+  #authGate .link-row a { color:var(--mint); text-decoration:none; font-weight:600; cursor:pointer; }
+  #authGate .gate-warn { font-size:12px; color:var(--danger); min-height:18px; margin-top:6px; font-weight:600; text-align:center; }
+  #authGate .gate-note { font-size:11px; color:var(--muted); margin-top:18px; line-height:1.5; text-align:center; }
+  #authGate /* ---- pin pad (used for admin PIN + OTP entry) ---- */
+  .pindots { display:flex; gap:16px; justify-content:center; margin:22px 0 6px; }
+  #authGate .pindot { width:14px; height:14px; border-radius:50%; border:2px solid var(--border); }
+  #authGate .pindot.filled { background:var(--mint); border-color:var(--mint); }
+  #authGate .pindot.error { background:var(--danger); border-color:var(--danger); }
+  #authGate .numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+  #authGate .numkey { background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-family:'Space Grotesk'; font-size:20px; font-weight:600; height:60px; border-radius:16px; cursor:pointer; }
+  #authGate .numkey:active { transform:scale(.94); }
+  #authGate .numkey.ghost { background:transparent; border:none; }
+  #authGate .otp-target { text-align:center; font-size:12.5px; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px; margin-top:16px; }
+  #authGate .otp-target b { color:var(--mint); }
+  #authGate .otp-demo-banner { margin-top:12px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--amber); background:rgba(242,184,75,.08); border:1px dashed #5C4A22; border-radius:10px; padding:8px; }
+  #authGate .resend { text-align:center; margin-top:12px; font-size:11.5px; color:var(--muted); }
+  #authGate .resend a { color:var(--mint); cursor:pointer; font-weight:600; }
+  #authGate .step-back { background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; margin-bottom:6px; }
+  #authGate /* ---- dashboard ---- */
+  #dash { display:none; background:var(--surface); border:1px solid var(--border); border-radius:24px; overflow:hidden; }
+  #authGate .topbar { padding:18px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+  #authGate .topbar h1 { font-family:'Space Grotesk'; font-size:17px; }
+  #authGate .logout { background:none; border:1px solid var(--border); color:var(--muted); font-size:11px; padding:6px 10px; border-radius:10px; cursor:pointer; }
+  #authGate .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); }
+  #authGate .stat { background:var(--surface); padding:16px; text-align:center; }
+  #authGate .stat .num { font-family:'Space Grotesk'; font-weight:700; font-size:20px; color:var(--mint); }
+  #authGate .stat .lbl { font-size:10.5px; color:var(--muted); margin-top:2px; }
+  #authGate .content { padding:14px 16px 20px; max-height:60vh; overflow-y:auto; }
+  #authGate .urow { display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+  #authGate .avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:14px; color:#06110B; flex:0 0 auto; }
+  #authGate .umain { flex:1; min-width:0; }
+  #authGate .uname { font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:6px; }
+  #authGate .usub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  #authGate .tag { font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:6px; }
+  #authGate .tag.active { color:var(--mint); background:rgba(61,220,151,.1); border:1px solid var(--mint-dim); }
+  #authGate .tag.suspended { color:var(--danger); background:rgba(229,72,77,.1); border:1px solid var(--danger-dim); }
+  #authGate .actions { display:flex; gap:6px; flex:0 0 auto; }
+  #authGate .abtn { background:var(--surface-2); border:1px solid var(--border); color:var(--muted); font-size:14px; width:32px; height:32px; border-radius:10px; cursor:pointer; }
+  #authGate .abtn.danger { color:var(--danger); }
+  #authGate .abtn.mint { color:var(--mint); }
+  #authGate .pwdrow { display:flex; align-items:center; gap:6px; margin-top:3px; }
+  #authGate .pwdval { font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--amber); letter-spacing:1px; }
+  #authGate .pwdtoggle { background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; padding:0; }
+  #authGate .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface-2); border:1px solid var(--border); padding:10px 18px; border-radius:12px; font-size:12.5px; opacity:0; transition:.2s; pointer-events:none; max-width:90vw; text-align:center; }
+  #authGate .toast.show { opacity:1; }
+  #recaptcha-container{ position:fixed; bottom:-100px; }
+</style>
+
+<!-- ===== Firebase (real backend) ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- ===================== AUTH GATE (Login / Signup / Admin Dashboard) ===================== -->
+<div id="authGate">
+  <div class="wrap">
+
+    <div id="authCard" class="card">
+      <div class="brand">Kavach <span>Login</span></div>
+      <div class="gate-sub" id="authSub">Panel में login करें</div>
+
+      <div id="stepChooser">
+        <div class="authtabs">
+          <div class="authtab active" id="tabLogin" onclick="switchAuthTab('login')">Login</div>
+          <div class="authtab" id="tabSignup" onclick="switchAuthTab('signup')">Sign Up</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="aap@example.com">
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <div class="phone-input">
+              <input class="cc" value="+91" disabled>
+              <input type="tel" id="loginPhone" placeholder="10-digit mobile number" maxlength="10">
+            </div>
+          </div>
+          <div class="field">
+            <label>PIN</label>
+            <input type="password" id="loginPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="field-err" id="loginErr"></div>
+          <button class="btn-primary" onclick="attemptLogin()">Login</button>
+          <div class="divider">या</div>
+          <button class="btn-google" onclick="googleAuth('login')"><span class="gicon"></span> Google से Continue करें</button>
+          <div class="link-row"><a onclick="goForgot()">PIN भूल गए?</a></div>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div id="signupForm" style="display:none;">
+          <div class="authtabs" style="margin-top:16px;">
+            <div class="authtab active" id="roleUserTab" onclick="setSignupRole('user')">User Account</div>
+            <div class="authtab" id="roleAdminTab" onclick="setSignupRole('admin')">Admin Account</div>
+          </div>
+          <div class="field">
+            <label>पूरा नाम</label>
+            <input type="text" id="suName" placeholder="आपका नाम">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="suEmail" placeholder="aap@example.com">
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <div class="phone-input">
+              <input class="cc" value="+91" disabled>
+              <input type="tel" id="suPhone" placeholder="10-digit mobile number" maxlength="10">
+            </div>
+          </div>
+          <div class="field">
+            <label>नया PIN बनाएं</label>
+            <input type="password" id="suPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="field-err" id="signupErr"></div>
+          <button class="btn-primary" onclick="startSignupVerification()">Account बनाएं</button>
+          <div class="divider">या</div>
+          <button class="btn-google" onclick="googleAuth('signup')"><span class="gicon"></span> Google से Sign Up करें</button>
+        </div>
+      </div>
+
+      <!-- STEP: real email verification (Firebase sends an actual link) -->
+      <div id="stepEmailVerify" style="display:none;">
+        <button class="step-back" onclick="cancelSignupFlow()">← वापस</button>
+        <div class="otp-target" id="emailVerifyLabel"></div>
+        <div class="otp-demo-banner" id="emailVerifyBanner" style="color:var(--mint);">📧 Real verification link भेज दी गई है — अपना inbox (Spam भी) check करें और link पर click करें।</div>
+        <div class="gate-warn" id="emailVerifyWarn"></div>
+        <button class="btn-primary" onclick="checkEmailVerified()">मैंने Verify कर लिया — Check करें</button>
+        <button class="btn-primary ghost" onclick="resendEmailVerify()">Link दोबारा भेजें</button>
+      </div>
+
+      <!-- STEP: real phone OTP (Firebase SMS, 6-digit) -->
+      <div id="stepOtp" style="display:none;">
+        <button class="step-back" onclick="backToChooser()">← वापस</button>
+        <div class="otp-target" id="otpTargetLabel"></div>
+        <div class="otp-demo-banner" id="otpDemoBanner" style="color:var(--mint);">📲 Real SMS OTP भेजा गया है (Firebase Phone Auth)।</div>
+        <div class="pindots" id="otpDots"></div>
+        <div class="gate-warn" id="otpWarn"></div>
+        <div class="numpad" id="otpNumpad"></div>
+        <div class="resend">OTP नहीं मिला? <a onclick="resendOtp()">दोबारा भेजें</a></div>
+      </div>
+
+      <!-- STEP: forgot-PIN — choose channel -->
+      <div id="stepForgotChoose" style="display:none;">
+        <button class="step-back" onclick="backToChooser()">← वापस</button>
+        <div class="gate-sub" style="margin-top:0;">PIN reset करने के लिए तरीका चुनें</div>
+        <div class="field">
+          <label>Registered Phone Number (real SMS OTP से reset)</label>
+          <div class="phone-input">
+            <input class="cc" value="+91" disabled>
+            <input type="tel" id="fpPhone" placeholder="10-digit mobile number" maxlength="10">
+          </div>
+        </div>
+        <div class="field-err" id="fpErr"></div>
+        <button class="btn-primary" onclick="sendForgotOtp('phone')">Phone पर Real OTP भेजें</button>
+        <div class="divider">या</div>
+        <div class="field">
+          <label>Registered Email (Firebase real reset-link ईमेल पर)</label>
+          <input type="email" id="fpEmail" placeholder="aap@example.com">
+        </div>
+        <button class="btn-primary ghost" onclick="sendForgotOtp('email')">Email पर Reset Link भेजें</button>
+      </div>
+
+      <!-- STEP: set new PIN (after real phone re-verification) -->
+      <div id="stepNewPin" style="display:none;">
+        <div class="gate-sub" style="margin-top:0;">नया PIN सेट करें</div>
+        <div class="field">
+          <label>नया 4-digit PIN</label>
+          <input type="password" id="newPinVal" placeholder="नया PIN" maxlength="4" inputmode="numeric">
+        </div>
+        <div class="field-err" id="newPinErr"></div>
+        <button class="btn-primary" onclick="submitNewPin()">PIN Save करें</button>
+      </div>
+
+      <div class="gate-note">Kavach अब Firebase पर चलता है — accounts, chats-lock demo data असली backend (Auth + Firestore) में save होते हैं। PIN <b>1234</b> या <b>9999</b> + कोई valid email/phone डालकर Admin Panel भी खोला जा सकता है (demo master key)।</div>
+    </div>
+
+    <!-- ===================== ADMIN DASHBOARD ===================== -->
+    <div id="dash">
+      <div class="topbar">
+        <h1>👤 Kavachi Control</h1>
+        <button class="logout" onclick="lockPanel()">Lock 🔒</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total Users</div></div>
+        <div class="stat"><div class="num" id="statActive">0</div><div class="lbl">Active</div></div>
+        <div class="stat"><div class="num" id="statSuspended">0</div><div class="lbl">Suspended</div></div>
+      </div>
+      <div class="content" id="userList"></div>
+    </div>
+
+  </div>
+  <div class="toast" id="toastAuth"></div>
+</div>
+<div id="recaptcha-container"></div>
+
+<div class="phone" id="phone" style="display:none;">
+
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span>Kavach 🛡</span>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- LOCK SCREEN -->
+  <div class="screen active" id="screen-lock">
+    <div class="lock-top">
+      <div class="shield-wrap">
+        <div class="shield-ring" id="shieldRing"></div>
+        <div class="shield-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="brand">Ka<span>vach</span></div>
+      <div class="lock-sub">आपकी बातचीत, सिर्फ़ आपकी</div>
+      <div class="lock-status" id="lockStatus"></div>
+
+      <div id="lockPinArea">
+        <div class="pindots" id="lockPinDots"></div>
+        <div class="numpad" id="lockNumpad"></div>
+      </div>
+
+      <div id="lockPatternArea" style="display:none;">
+        <div class="pattern-grid" id="lockPatternGrid"></div>
+      </div>
+
+      <div id="lockFaceArea" style="display:none;">
+        <div class="faceid-box">
+          <div class="face-circle" id="faceCircle">🙂</div>
+          <button class="btn-primary" id="faceScanBtn">Face ID से Unlock करें</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lock-methods">
+      <button class="method-btn active" data-m="pin" onclick="setLockMethod('pin')">PIN</button>
+      <button class="method-btn" data-m="pattern" onclick="setLockMethod('pattern')">Pattern</button>
+      <button class="method-btn" data-m="face" onclick="setLockMethod('face')">Face ID</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="topbar">
+      <h1>Kavach</h1>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="lockchip">🛡 Secured</div>
+        <div class="avatar" id="homeProfileBtn" onclick="navigate('profile')" style="width:34px;height:34px;font-size:12px;cursor:pointer;"></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stories-row" id="storiesRow"></div>
+      <div id="feedList"></div>
+    </div>
+  </div>
+
+  <!-- CHATS -->
+  <div class="screen" id="screen-chats">
+    <div class="topbar"><h1>Chats</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content" id="chatsList"></div>
+  </div>
+
+  <!-- GROUPS -->
+  <div class="screen" id="screen-groups">
+    <div class="topbar"><h1>Groups</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content" id="groupsList"></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="screen" id="screen-search">
+    <div class="topbar"><h1>Search</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content">
+      <input type="text" id="searchInput" class="msg-input" style="width:100%; margin-bottom:14px;" placeholder="Chats, groups या contacts search करें..." oninput="renderSearch()">
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div class="chatdetail-header">
+      <button class="backbtn" onclick="navigate('profile')">←</button>
+      <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Settings</div>
+    </div>
+    <div class="content">
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="navigate('profile')" style="cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="avatar" id="settingsProfileAvatar" style="width:40px;height:40px;font-size:14px;"></div>
+              <div><span id="settingsProfileName"></span><div class="desc">Profile, bio और birthday देखें</div></div>
+            </div>
+            <span>→</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">App Lock</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Lock Method<div class="desc" id="lockMethodDesc">PIN</div></div><span id="lockMethodVal">PIN</span></div>
+          <div class="settings-row"><div>App PIN बदलें<div class="desc">4-digit code</div></div><button class="method-btn" onclick="openChangeAppPin()">बदलें</button></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Chat Locks</div>
+        <div class="settings-card" id="lockedChatsSummary"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">सुरक्षा नियम</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Auto-delete on wrong PIN<div class="desc">किसी locked chat पर 5 गलत PIN = chat delete</div></div><span style="color:var(--mint);font-weight:700;">ON</span></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="logoutToAuth()" style="cursor:pointer;"><div style="color:var(--danger); font-weight:700;">Logout</div><span>→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT DETAIL -->
+  <div class="screen" id="screen-chatdetail">
+    <div class="content">
+      <div class="chatdetail-header">
+        <button class="backbtn" onclick="navigate('chats')">←</button>
+        <div class="avatar" id="cdAvatar" style="width:38px;height:38px;font-size:13px;"></div>
+        <div style="flex:1;">
+          <div style="font-weight:700; font-size:14px;" id="cdName"></div>
+          <div style="font-size:11px; color:var(--muted);" id="cdStatus">online</div>
+        </div>
+        <button class="lock-btn" onclick="callFromChat('audio')" title="Audio call">📞</button>
+        <button class="lock-btn" onclick="callFromChat('video')" title="Video call">🎥</button>
+        <button class="lock-btn" id="cdLockBtn" onclick="toggleLockFromDetail()">🔓</button>
+      </div>
+      <div class="msgs" id="cdMsgs"></div>
+      <div class="msg-input-row">
+        <input class="msg-input" id="cdInput" placeholder="Message लिखें...">
+        <button class="sendbtn" onclick="sendDemoMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REELS (full-screen vertical) -->
+  <div class="screen" id="screen-reels">
+    <div class="reels-feed" id="reelsFeed"></div>
+  </div>
+
+  <!-- OTHER USER PROFILE (view + follow/unfollow) -->
+  <div class="screen" id="screen-otherprofile">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
+        <button class="backbtn" onclick="navigate(state.otherProfileBackTo || 'home')">←</button>
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Profile</div>
+      </div>
+
+      <div style="text-align:center; margin-top:6px;">
+        <div class="avatar" id="opAvatar" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
+        <div id="opName" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
+        <div id="opFollowers" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
+        <button class="btn-primary" id="opFollowBtn" style="width:auto; padding:10px 34px; margin-top:16px;" onclick="toggleFollow()">Follow</button>
+      </div>
+
+      <div class="settings-section" style="margin-top:24px;">
+        <div class="settings-label">Bio</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="opBio" style="font-size:13.5px; line-height:1.5;"></div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Birthday</div>
+        <div class="settings-card" style="padding:14px 16px; display:flex; align-items:center; gap:8px; font-size:13.5px;">
+          🎂 <span id="opBday"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="screen-profile">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Profile</div>
+        <button class="method-btn" id="profileEditBtn" onclick="toggleProfileEdit()">Edit</button>
+        <button class="lock-btn" onclick="navigate('settings')" title="Settings" style="font-size:19px;">⚙️</button>
+      </div>
+
+      <div style="text-align:center; margin-top:6px;">
+        <div class="avatar" id="profileAvatarBig" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
+        <div id="profileNameView" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">🛡 End-to-end secured profile</div>
+      </div>
+
+      <div class="settings-section" style="margin-top:22px;">
+        <div class="settings-label">Bio</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="bioView" style="font-size:13.5px; line-height:1.5; color:var(--text);"></div>
+          <textarea id="bioEdit" maxlength="150" rows="3" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13.5px; padding:10px; resize:none;"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Birthday</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="bdayView" style="font-size:13.5px; display:flex; align-items:center; gap:8px;">🎂 <span id="bdayViewText"></span></div>
+          <input type="date" id="bdayEdit" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13px; padding:10px;">
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Username</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="nameView" style="font-size:13.5px;"></div>
+          <input type="text" id="nameEdit" maxlength="30" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13.5px; padding:10px;">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="profileSaveBtn" style="display:none; margin-top:6px;" onclick="saveProfile()">Save Profile</button>
+    </div>
+  </div>
+
+  <!-- CALL SCREEN -->
+  <div class="screen" id="screen-call">
+    <div class="content">
+      <div class="call-avatar-big" id="callAvatar"></div>
+      <div class="call-name" id="callName"></div>
+      <div class="call-status" id="callStatusTxt">Calling…</div>
+      <div class="call-controls">
+        <button class="ctrlbtn">🔇</button>
+        <button class="ctrlbtn end" onclick="navigate(state.callBackTo || 'chats')">📵</button>
+        <button class="ctrlbtn">🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav" id="bottomnav" style="display:none;">
+    <button class="navbtn active" data-s="home" onclick="navigate('home')">🏠<span>Home</span></button>
+    <button class="navbtn" data-s="reels" onclick="navigate('reels')">🎬<span>Reels</span></button>
+    <button class="navbtn" data-s="chats" onclick="navigate('chats')">💬<span>Chats</span></button>
+    <button class="navbtn" data-s="groups" onclick="navigate('groups')">👥<span>Groups</span></button>
+    <button class="navbtn" data-s="search" onclick="navigate('search')">🔍<span>Search</span></button>
+    <button class="navbtn" data-s="profile" onclick="navigate('profile')">👤<span>Profile</span></button>
+  </div>
+
+  <!-- MODAL: PIN entry for chat lock / set / change -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-title" id="modalTitle">PIN डालें</div>
+      <div class="modal-sub" id="modalSub">यह chat lock है</div>
+      <div class="pindots" id="modalPinDots" style="margin-top:22px;"></div>
+      <div class="attempts-warn" id="modalWarn"></div>
+      <div class="numpad" id="modalNumpad" style="margin-top:24px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   FIREBASE INIT — real backend (Auth + Firestore)
+   Console setup required (see SETUP.md shipped alongside this file):
+     1) Authentication → Sign-in method → enable Email/Password, Phone, Google
+     2) Authentication → Settings → Authorized domains → add the domain this
+        file is actually hosted on (Google popup + reCAPTCHA fail otherwise)
+     3) Phone Auth needs the Blaze (pay-as-you-go) billing plan for real SMS
+        to arbitrary numbers (Spark/free plan only works with pre-added
+        test numbers in the console)
+     4) Firestore Database → create database, then set rules (see SETUP.md)
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDkK0ZsGCUQ_q3suTgoEiqehujJpxW9tsg",
+  authDomain: "kavach-86f4a.firebaseapp.com",
+  projectId: "kavach-86f4a",
+  storageBucket: "kavach-86f4a.firebasestorage.app",
+  messagingSenderId: "441192498957",
+  appId: "1:441192498957:web:a6c3045d90c4f5aaf55244",
+  measurementId: "G-XRN84FJP6L"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* 4-digit PIN -> Firebase password (Firebase requires >=6 chars) */
+function pinToPassword(pin){ return 'kv_' + pin + '_pin'; }
+
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function isValidPhone(v){ return /^[6-9]\d{9}$/.test(v); }
+
+const ADMIN_PIN_OPTIONS = ['1234','9999']; // local demo master-key, unlocks Admin panel with ANY valid email+phone — no Firebase involved by design
+let signupRole = 'user';
+let otpState = { mode:null, pendingSignup:null, verificationId:null, forgotConfirmation:null, input:'' };
+let users = []; // populated live from Firestore when Admin dashboard opens
+
+function atoast(msg, danger){
+  const t = document.getElementById('toastAuth');
+  t.textContent = msg;
+  t.className = 'toast show' + (danger ? ' danger' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className='toast'; }, 2800);
+}
+
+/* ---------------- TAB / STEP SWITCHING ---------------- */
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = tab==='signup' ? 'block' : 'none';
+}
+function setSignupRole(role){
+  signupRole = role;
+  document.getElementById('roleUserTab').classList.toggle('active', role==='user');
+  document.getElementById('roleAdminTab').classList.toggle('active', role==='admin');
+}
+function showStep(step){
+  ['stepChooser','stepEmailVerify','stepOtp','stepForgotChoose','stepNewPin'].forEach(id=>{
+    document.getElementById(id).style.display = (id===step) ? 'block' : 'none';
+  });
+}
+function backToChooser(){
+  showStep('stepChooser');
+  document.getElementById('loginErr').textContent='';
+  document.getElementById('signupErr').textContent='';
+}
+function cancelSignupFlow(){
+  if(auth.currentUser && !auth.currentUser.emailVerified){ auth.signOut(); }
+  backToChooser();
+}
+
+/* ---------------- reCAPTCHA (required by Firebase Phone Auth) ---------------- */
+function ensureRecaptcha(){
+  if(!window._recaptchaVerifier){
+    window._recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size:'invisible' }, auth);
+  }
+  return window._recaptchaVerifier;
+}
+
+/* ---------------- LOGIN ---------------- */
+function attemptLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pin = document.getElementById('loginPin').value.trim();
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+
+  if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+  if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+  if(!/^\d{4}$/.test(pin)){ err.textContent='⚠️ 4-digit PIN डालें'; return; }
+
+  if(ADMIN_PIN_OPTIONS.includes(pin)){
+    enterDashboard();
+    return;
+  }
+
+  atoast('🔐 Login हो रहा है...');
+  auth.signInWithEmailAndPassword(email, pinToPassword(pin)).then(async cred=>{
+    const snap = await db.collection('accounts').doc(cred.user.uid).get();
+    if(!snap.exists){ err.textContent='⚠️ Account का data नहीं मिला (Firestore)'; auth.signOut(); return; }
+    const data = snap.data();
+    if(data.phone && data.phone !== phone){ err.textContent='⚠️ Phone number match नहीं हुआ'; auth.signOut(); return; }
+    if(data.role === 'admin'){ enterDashboard(); }
+    else { enterUserApp(data); }
+  }).catch(err2=>{
+    err.textContent = '❌ ' + (err2.message || 'Login fail हुआ');
+  });
+}
+
+function googleAuth(mode){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  atoast('🔵 Google से sign-in हो रहा है...');
+  auth.signInWithPopup(provider).then(async result=>{
+    const user = result.user;
+    const ref = db.collection('accounts').doc(user.uid);
+    const snap = await ref.get();
+    let data;
+    if(!snap.exists){
+      const role = (mode==='signup' && signupRole==='admin') ? 'admin' : 'user';
+      data = { name:user.displayName||'Google User', email:user.email||'', phone:'', role, provider:'google' };
+      await ref.set(data);
+    } else {
+      data = snap.data();
+    }
+    atoast(mode==='signup' ? '✅ Google से account बन गया' : '✅ Google से login हो गया');
+    if(data.role === 'admin'){ enterDashboard(); } else { enterUserApp(data); }
+  }).catch(err=>{
+    atoast('❌ Google sign-in fail: ' + err.message, true);
+  });
+}
+
+function enterDashboard(){
+  document.getElementById('authCard').style.display='none';
+  document.getElementById('dash').style.display='block';
+  loadUsersFromFirestore();
+}
+
+function lockPanel(){
+  if(auth.currentUser){ auth.signOut(); }
+  document.getElementById('authCard').style.display='block';
+  document.getElementById('dash').style.display='none';
+  backToChooser();
+  switchAuthTab('login');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPin').value='';
+  document.getElementById('loginErr').textContent='';
+}
+
+function enterUserApp(accountData){
+  document.getElementById('authGate').style.display='none';
+  document.getElementById('phone').style.display='flex';
+  if(accountData && accountData.name){
+    state.profile.name = accountData.name;
+  }
+}
+
+function logoutToAuth(){
+  if(auth.currentUser){ auth.signOut(); }
+  document.getElementById('phone').style.display='none';
+  document.getElementById('authGate').style.display='block';
+  backToChooser();
+  switchAuthTab('login');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPin').value='';
+  navigate('lock');
+}
+
+/* ---------------- SIGNUP: step 1 — create real Firebase account ---------------- */
+function startSignupVerification(){
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const phone = document.getElementById('suPhone').value.trim();
+  const pin = document.getElementById('suPin').value.trim();
+  const err = document.getElementById('signupErr');
+  err.textContent = '';
+
+  if(!name){ err.textContent='⚠️ नाम डालें'; return; }
+  if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+  if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+  if(!/^\d{4}$/.test(pin)){ err.textContent='⚠️ 4-digit PIN बनाएं'; return; }
+
+  otpState.pendingSignup = { name, email, phone, pin, role: signupRole };
+  atoast('⏳ Account बनाया जा रहा है...');
+  auth.createUserWithEmailAndPassword(email, pinToPassword(pin)).then(cred=>{
+    return cred.user.sendEmailVerification().then(()=>{
+      document.getElementById('emailVerifyLabel').innerHTML = '<b>'+email+'</b> पर real verification link भेज दी गई है';
+      document.getElementById('emailVerifyWarn').textContent = '';
+      showStep('stepEmailVerify');
+    });
+  }).catch(e=>{
+    err.textContent = '❌ ' + (e.message || 'Signup fail हुआ');
+  });
+}
+
+function resendEmailVerify(){
+  if(!auth.currentUser){ return; }
+  auth.currentUser.sendEmailVerification().then(()=>{
+    atoast('📧 Link दोबारा भेज दी गई');
+  }).catch(e=>{
+    document.getElementById('emailVerifyWarn').textContent = '❌ ' + e.message;
+  });
+}
+
+function checkEmailVerified(){
+  if(!auth.currentUser){ document.getElementById('emailVerifyWarn').textContent='⚠️ Session नहीं मिला, दोबारा शुरू करें'; return; }
+  document.getElementById('emailVerifyWarn').textContent = 'Check हो रहा है...';
+  auth.currentUser.reload().then(()=>{
+    if(auth.currentUser.emailVerified){
+      document.getElementById('emailVerifyWarn').textContent = '';
+      beginPhoneOtp();
+    } else {
+      document.getElementById('emailVerifyWarn').textContent = '⚠️ अभी तक verify नहीं हुआ — पहले email में link पर click करें';
+    }
+  });
+}
+
+/* ---------------- SIGNUP: step 2 — real SMS OTP, then link to account ---------------- */
+function beginPhoneOtp(){
+  const phone = otpState.pendingSignup.phone;
+  document.getElementById('otpTargetLabel').innerHTML = 'Phone verification — <b>+91 '+phone+'</b> पर SMS OTP भेजा जा रहा है...';
+  document.getElementById('otpWarn').textContent = '';
+  otpState.input = '';
+  showStep('stepOtp');
+  const provider = new firebase.auth.PhoneAuthProvider(auth);
+  provider.verifyPhoneNumber('+91'+phone, ensureRecaptcha()).then(verificationId=>{
+    otpState.verificationId = verificationId;
+    otpState.mode = 'signup-phone';
+    document.getElementById('otpTargetLabel').innerHTML = 'Phone verification — <b>+91 '+phone+'</b> पर भेजा गया 6-digit OTP डालें';
+    renderOtpDots();
+    buildNumpad('otpNumpad', onOtpKey);
+  }).catch(e=>{
+    document.getElementById('otpWarn').textContent = '❌ OTP भेजने में दिक्कत: ' + e.message;
+  });
+}
+
+function resendOtp(){
+  if(otpState.mode === 'signup-phone'){ beginPhoneOtp(); }
+  else if(otpState.mode === 'forgot-phone'){ sendForgotOtp('phone'); }
+}
+
+function renderOtpDots(err){
+  const el = document.getElementById('otpDots'); el.innerHTML='';
+  const len = 6;
+  for(let i=0;i<len;i++){
+    const d = document.createElement('div');
+    d.className = 'pindot' + (i<otpState.input.length ? (err?' error':' filled') : '');
+    el.appendChild(d);
+  }
+}
+
+function onOtpKey(k){
+  const warn = document.getElementById('otpWarn');
+  if(k==='⌫'){ otpState.input = otpState.input.slice(0,-1); renderOtpDots(); return; }
+  if(otpState.input.length>=6) return;
+  otpState.input += k;
+  renderOtpDots();
+  if(otpState.input.length===6){
+    warn.textContent = 'Verify हो रहा है...';
+    if(otpState.mode === 'signup-phone'){
+      const credential = firebase.auth.PhoneAuthProvider.credential(otpState.verificationId, otpState.input);
+      auth.currentUser.linkWithCredential(credential).then(()=>{
+        finalizeSignup();
+      }).catch(e=>{
+        warn.textContent = '❌ ' + e.message;
+        setTimeout(()=>{ otpState.input=''; renderOtpDots(); }, 600);
+      });
+    } else if(otpState.mode === 'forgot-phone'){
+      otpState.forgotConfirmation.confirm(otpState.input).then(()=>{
+        warn.textContent = '';
+        toast_forgot_ok();
+      }).catch(e=>{
+        warn.textContent = '❌ ' + e.message;
+        setTimeout(()=>{ otpState.input=''; renderOtpDots(); }, 600);
+      });
+    }
+  }
+}
+
+function finalizeSignup(){
+  const p = otpState.pendingSignup;
+  const uid = auth.currentUser.uid;
+  db.collection('accounts').doc(uid).set({
+    name: p.name, email: p.email, phone: p.phone, pin: p.pin, role: p.role,
+    status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{
+    auth.signOut();
+    atoast('✅ Account बन गया — अब login करें');
+    backToChooser();
+    switchAuthTab('login');
+    document.getElementById('loginEmail').value = p.email;
+    document.getElementById('loginPhone').value = p.phone;
+  }).catch(e=>{
+    atoast('❌ Firestore save fail: ' + e.message, true);
+  });
+}
+
+/* ---------------- FORGOT PIN ---------------- */
+function goForgot(){
+  document.getElementById('fpEmail').value='';
+  document.getElementById('fpPhone').value='';
+  document.getElementById('fpErr').textContent='';
+  showStep('stepForgotChoose');
+}
+
+function sendForgotOtp(channel){
+  const err = document.getElementById('fpErr');
+  err.textContent = '';
+  if(channel==='phone'){
+    const phone = document.getElementById('fpPhone').value.trim();
+    if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+    atoast('📲 Real OTP भेजा जा रहा है...');
+    auth.signInWithPhoneNumber('+91'+phone, ensureRecaptcha()).then(confirmationResult=>{
+      otpState.forgotConfirmation = confirmationResult;
+      otpState.mode = 'forgot-phone';
+      otpState.input = '';
+      document.getElementById('otpTargetLabel').innerHTML = 'Password reset — <b>+91 '+phone+'</b> पर भेजा गया 6-digit OTP डालें';
+      document.getElementById('otpWarn').textContent = '';
+      renderOtpDots();
+      buildNumpad('otpNumpad', onOtpKey);
+      showStep('stepOtp');
+    }).catch(e=>{
+      err.textContent = '❌ ' + e.message;
+    });
+  } else {
+    const email = document.getElementById('fpEmail').value.trim();
+    if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+    auth.sendPasswordResetEmail(email).then(()=>{
+      atoast('📧 Real password-reset email भेज दिया गया — अपना inbox check करें (यह app के PIN box से बाहर, Firebase के अपने page पर होता है)');
+    }).catch(e=>{
+      err.textContent = '❌ ' + e.message;
+    });
+  }
+}
+
+function toast_forgot_ok(){
+  atoast('✅ Phone verify हो गया — नया PIN सेट करें');
+  showStep('stepNewPin');
+  document.getElementById('newPinErr').textContent='';
+  document.getElementById('newPinVal').value='';
+}
+
+function submitNewPin(){
+  const val = document.getElementById('newPinVal').value.trim();
+  const err = document.getElementById('newPinErr');
+  if(!/^\d{4}$/.test(val)){ err.textContent='⚠️ 4-digit PIN डालें'; return; }
+  if(!auth.currentUser){ err.textContent='⚠️ Session expire हो गया, दोबारा try करें'; return; }
+  auth.currentUser.updatePassword(pinToPassword(val)).then(async ()=>{
+    await db.collection('accounts').doc(auth.currentUser.uid).set({ pin: val }, { merge:true });
+    const email = auth.currentUser.email;
+    auth.signOut();
+    atoast('✅ PIN reset हो गया, अब login करें');
+    backToChooser();
+    switchAuthTab('login');
+    if(email) document.getElementById('loginEmail').value = email;
+  }).catch(e=>{
+    err.textContent = '❌ ' + e.message;
+  });
+}
+
+/* ---------------- ADMIN DASHBOARD (live Firestore data) ---------------- */
+const AVATAR_COLORS = ['#3DDC97','#F2B84B','#E5484D','#7C8A9A','#4C9AFF','#C77DFF'];
+function colorFor(id){
+  let h=0; for(let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+async function loadUsersFromFirestore(){
+  document.getElementById('userList').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Loading users…</div>';
+  try{
+    const snap = await db.collection('accounts').where('role','==','user').get();
+    users = snap.docs.map(d=>{
+      const v = d.data();
+      return { id:d.id, name:v.name||'User', color:colorFor(d.id), role:'Member',
+        status:v.status||'active', chatsLocked:0, pin:v.pin||'----', pinVisible:false,
+        email:v.email||'', phone:v.phone||'' };
+    });
+  }catch(e){
+    atoast('❌ Users load नहीं हुए: ' + e.message, true);
+    users = [];
+  }
+  renderUsers();
+}
+
+function renderUsers(){
+  document.getElementById('statTotal').textContent = users.length;
+  document.getElementById('statActive').textContent = users.filter(u=>u.status==='active').length;
+  document.getElementById('statSuspended').textContent = users.filter(u=>u.status==='suspended').length;
+
+  document.getElementById('userList').innerHTML = users.length ? users.map(u=>`
+    <div class="urow">
+      <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+      <div class="umain">
+        <div class="uname">${u.name} <span class="tag ${u.status}">${u.status==='active'?'ACTIVE':'SUSPENDED'}</span></div>
+        <div class="usub">${u.email || u.phone || ''}</div>
+        <div class="pwdrow">
+          <span class="pwdval">${u.pinVisible ? u.pin : '••••'}</span>
+          <button class="pwdtoggle" onclick="togglePwd('${u.id}')">${u.pinVisible?'Hide':'Show'}</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="abtn ${u.status==='active'?'danger':''}" title="${u.status==='active'?'Suspend':'Reactivate'}" onclick="toggleSuspend('${u.id}')">${u.status==='active'?'⛔':'✅'}</button>
+        <button class="abtn danger" title="Delete user" onclick="removeUser('${u.id}')">🗑️</button>
+      </div>
+    </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">कोई registered user नहीं है</div>';
+}
+
+function togglePwd(id){
+  const u = users.find(x=>x.id===id);
+  u.pinVisible = !u.pinVisible;
+  renderUsers();
+}
+
+function toggleSuspend(id){
+  const u = users.find(x=>x.id===id);
+  u.status = u.status==='active' ? 'suspended' : 'active';
+  db.collection('accounts').doc(id).set({ status:u.status }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(u.status==='active' ? `✅ ${u.name} reactivate कर दिया गया` : `⛔ ${u.name} suspend कर दिया गया`);
+  renderUsers();
+}
+function removeUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!confirm(`${u.name} को permanently delete करें?`)) return;
+  db.collection('accounts').doc(id).delete().catch(e=>atoast('❌ '+e.message, true));
+  users = users.filter(x=>x.id!==id);
+  atoast(`🗑️ ${u.name} delete कर दिया गया`);
+  renderUsers();
+}
+</script>
+
+<script>
+/* ---------------- STATE ---------------- */
+const state = {
+  lockMethod: 'pin',
+  appPin: '1234',
+  pattern: [0,4,8],
+  currentInput: '',
+  patternInput: [],
+  currentScreen: 'home',
+  activeChatId: null,
+  modalCtx: null, // {type:'unlock-app'} | {type:'set-chat-pin',id} | {type:'unlock-chat',id} | {type:'change-app-pin', step}
+  chats: [
+    {id:'c1', uid:'u_ananya', name:'Ananya', color:'#3DDC97', last:'Kal milte hai na?', time:'9:42', locked:false, pin:null, attempts:0, unlockedThisSession:false,
+      messages:[{from:'in',text:'Hii, kaisi ho?'},{from:'out',text:'Badiya! tum batao'},{from:'in',text:'Kal milte hai na?'}]},
+    {id:'c2', uid:'u_rohit', name:'Rohit Office', color:'#F2B84B', last:'Report bhej di maine', time:'8:15', locked:false, pin:null, attempts:0, unlockedThisSession:false,
+      messages:[{from:'in',text:'Report bhej di maine'},{from:'out',text:'Thanks, dekh leta hu'}]},
+    {id:'c3', uid:'u_mom', name:'Mom ❤️', color:'#E5484D', last:'Khana kha liya?', time:'Yesterday', locked:false, pin:null, attempts:0, unlockedThisSession:false,
+      messages:[{from:'in',text:'Khana kha liya?'},{from:'out',text:'Haan mumma'}]},
+    {id:'c4', uid:'u_priya', name:'Priya', color:'#7C8A9A', last:'Voice note', time:'Yesterday', locked:false, pin:null, attempts:0, unlockedThisSession:false,
+      messages:[{from:'in',text:'Sun message'},{from:'out',text:'Ok sunta hu'}]},
+  ],
+  groups: [
+    {id:'g1', name:'College Squad 🎓', members:'Ananya, Rohit +6', last:'Rohit: kal exam hai kya', time:'10:02', locked:false, pin:null, attempts:0},
+    {id:'g2', name:'Ghar Wale 🏡', members:'Papa, Mom, Bhai', last:'Papa: pahucho jaldi', time:'7:50', locked:false, pin:null, attempts:0},
+  ],
+  stories: [
+    {name:'आपकी Story', mine:true},
+    {name:'Ananya', seen:false, uid:'u_ananya'},
+    {name:'Rohit', seen:false, uid:'u_rohit'},
+    {name:'Priya', seen:true, uid:'u_priya'},
+    {name:'Kabir', seen:true, uid:'u_kabir'},
+  ],
+  reels: [
+    {user:'Ananya', uid:'u_ananya', color:'#3DDC97', cap:'Sunset vibes yaar 🌅✨', likes:'2.4K', comments:'88'},
+    {user:'Kabir', uid:'u_kabir', color:'#F2B84B', cap:'Gym day 💪 #consistency', likes:'980', comments:'34'},
+    {user:'Priya', uid:'u_priya', color:'#7C8A9A', cap:'Monsoon walk ☔🎶', likes:'5.1K', comments:'210'},
+    {user:'Rohit Office', uid:'u_rohit', color:'#E5484D', cap:'Weekend trip recap 🚗', likes:'1.2K', comments:'56'},
+  ],
+  otherUsers: [
+    {id:'u_ananya', name:'Ananya', color:'#3DDC97', bio:'Coffee & code ☕💻 | Sunset chaser', birthday:'1999-04-22', following:true, followers:842},
+    {id:'u_rohit', name:'Rohit Office', color:'#F2B84B', bio:'Product Team @ Office | Cricket fan 🏏', birthday:'1996-11-03', following:true, followers:310},
+    {id:'u_mom', name:'Mom ❤️', color:'#E5484D', bio:'Ghar ki shaan 🏡 | Best cook in town', birthday:'1970-06-10', following:true, followers:56},
+    {id:'u_priya', name:'Priya', color:'#7C8A9A', bio:'Dance • Travel • Chai lover ☕', birthday:'2001-09-18', following:false, followers:1200},
+    {id:'u_kabir', name:'Kabir', color:'#F2B84B', bio:'Gym | Motivation | Consistency 💪', birthday:'1998-02-05', following:false, followers:670},
+  ],
+  otherProfileBackTo:'home',
+  activeOtherProfileId:null,
+  profile: {
+    name:'Aap',
+    color:'#3DDC97',
+    bio:'Privacy पहले, बाकी सब बाद में। 🛡',
+    birthday:'2000-01-15',
+    editing:false
+  }
+};
+
+/* ---------------- HELPERS ---------------- */
+function toast(msg, danger){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (danger ? ' danger' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className='toast'; }, 2600);
+}
+function initials(name){ return name.trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+/* ---------------- NAVIGATION ---------------- */
+function navigate(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  state.currentScreen = screen;
+  const nav = document.getElementById('bottomnav');
+  const topLevel = ['home','reels','chats','groups','search','profile'];
+  nav.style.display = topLevel.includes(screen) ? 'flex' : 'none';
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.s===screen));
+  if(screen==='home') renderHome();
+  if(screen==='reels') renderReels();
+  if(screen==='chats') renderChats();
+  if(screen==='groups') renderGroups();
+  if(screen==='search') renderSearch();
+  if(screen==='settings') renderSettings();
+  if(screen==='profile') renderProfile();
+  if(screen==='otherprofile') renderOtherProfileView();
+}
+
+/* ---------------- LOCK SCREEN ---------------- */
+function setLockMethod(m){
+  state.lockMethod = m;
+  document.querySelectorAll('.method-btn').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  document.getElementById('lockPinArea').style.display = m==='pin' ? 'block':'none';
+  document.getElementById('lockPatternArea').style.display = m==='pattern' ? 'block':'none';
+  document.getElementById('lockFaceArea').style.display = m==='face' ? 'block':'none';
+  document.getElementById('lockStatus').textContent = '';
+  document.getElementById('lockStatus').className = 'lock-status';
+  state.currentInput = ''; state.patternInput = [];
+  if(m==='pin') buildNumpad('lockNumpad', onLockPinKey);
+  if(m==='pattern') buildPatternGrid('lockPatternGrid', onLockPatternDone);
+  renderPinDots('lockPinDots', 0);
+}
+
+function buildNumpad(containerId, keyHandler){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    if(k===''){ b.className='numkey ghost'; b.disabled=true; }
+    else { b.className='numkey'; b.textContent=k; b.onclick=()=>keyHandler(k); }
+    el.appendChild(b);
+  });
+}
+
+function renderPinDots(containerId, count, errorState){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const d = document.createElement('div');
+    d.className = 'pindot' + (i<count ? (errorState?' error':' filled') : '');
+    el.appendChild(d);
+  }
+}
+
+function onLockPinKey(k){
+  const statusEl = document.getElementById('lockStatus');
+  if(k==='⌫'){ state.currentInput = state.currentInput.slice(0,-1); renderPinDots('lockPinDots', state.currentInput.length); return; }
+  if(state.currentInput.length>=4) return;
+  state.currentInput += k;
+  renderPinDots('lockPinDots', state.currentInput.length);
+  if(state.currentInput.length===4){
+    if(state.currentInput === state.appPin){
+      statusEl.textContent = 'Unlocked ✓'; statusEl.className='lock-status';
+      setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+    } else {
+      statusEl.textContent = 'Galat PIN, dobara try karein'; statusEl.className='lock-status err';
+      renderPinDots('lockPinDots', 4, true);
+      setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 500);
+    }
+  }
+}
+
+function buildPatternGrid(containerId, doneHandler){
+  const el = document.getElementById(containerId);
+  el.innerHTML='';
+  for(let i=0;i<9;i++){
+    const n = document.createElement('div');
+    n.className='pnode';
+    n.dataset.i = i;
+    n.onclick = ()=>{
+      if(state.patternInput.includes(i)) return;
+      state.patternInput.push(i);
+      n.classList.add('on');
+      if(state.patternInput.length===3) doneHandler();
+    };
+    el.appendChild(n);
+  }
+}
+
+function onLockPatternDone(){
+  const statusEl = document.getElementById('lockStatus');
+  const match = JSON.stringify(state.patternInput)===JSON.stringify(state.pattern);
+  if(match){
+    statusEl.textContent='Unlocked ✓'; statusEl.className='lock-status';
+    setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+  } else {
+    statusEl.textContent='Galat pattern, dobara try karein'; statusEl.className='lock-status err';
+    document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>n.classList.add('err'));
+    setTimeout(()=>{
+      state.patternInput=[];
+      document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>{n.classList.remove('on');n.classList.remove('err');});
+    }, 500);
+  }
+}
+
+document.getElementById('faceScanBtn').onclick = function(){
+  const circle = document.getElementById('faceCircle');
+  const statusEl = document.getElementById('lockStatus');
+  circle.classList.add('scanning');
+  statusEl.textContent = 'Scan ho raha hai…'; statusEl.className='lock-status';
+  setTimeout(()=>{
+    circle.classList.remove('scanning');
+    statusEl.textContent = 'Face verified ✓';
+    setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+  }, 1300);
+};
+
+/* ---------------- HOME (Stories + Feed/Reels) ---------------- */
+function renderHome(){
+  const btn = document.getElementById('homeProfileBtn');
+  btn.style.background = state.profile.color;
+  btn.textContent = initials(state.profile.name);
+
+  const row = document.getElementById('storiesRow');
+  row.innerHTML = state.stories.map(s=>`
+    <div class="story" ${s.mine?'':`onclick="openOtherProfile('${s.uid}','home')"`} style="${s.mine?'':'cursor:pointer;'}">
+      <div class="story-ring ${s.seen?'seen':''}">
+        <div class="story-avatar">${s.mine ? '+' : initials(s.name)}</div>
+      </div>
+      <div class="story-name">${s.mine? 'Aapki Story' : s.name}</div>
+    </div>`).join('');
+
+  const feed = document.getElementById('feedList');
+  const reels = [
+    {user:'Ananya', cap:'Sunset vibes 🌅', tag:'REEL'},
+    {user:'Rohit Office', cap:'Team lunch 🍕', tag:'PHOTO'},
+    {user:'Priya', cap:'Monsoon walk ☔', tag:'REEL'},
+  ];
+  feed.innerHTML = reels.map(r=>`
+    <div class="reel-card">
+      <div class="reel-media"><span class="reel-tag">${r.tag}</span>▶</div>
+      <div class="reel-meta">
+        <div class="reel-user">${r.user}</div>
+        <div class="reel-cap">${r.cap}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------------- OTHER USER PROFILE (Follow/Unfollow) ---------------- */
+function openOtherProfile(uid, backTo){
+  if(!uid) return;
+  state.activeOtherProfileId = uid;
+  state.otherProfileBackTo = backTo || 'home';
+  navigate('otherprofile');
+}
+
+function renderOtherProfileView(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u) return;
+  document.getElementById('opAvatar').style.background = u.color;
+  document.getElementById('opAvatar').textContent = initials(u.name);
+  document.getElementById('opName').textContent = u.name;
+  document.getElementById('opFollowers').textContent = `${u.followers} followers`;
+  document.getElementById('opBio').textContent = u.bio;
+  document.getElementById('opBday').textContent = fmtBday(u.birthday);
+  const btn = document.getElementById('opFollowBtn');
+  btn.textContent = u.following ? 'Following ✓' : 'Follow';
+  btn.style.background = u.following ? 'var(--surface-2)' : 'var(--mint)';
+  btn.style.color = u.following ? 'var(--text)' : '#06110B';
+  btn.style.border = u.following ? '1px solid var(--border)' : 'none';
+}
+
+function toggleFollow(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u) return;
+  u.following = !u.following;
+  u.followers += u.following ? 1 : -1;
+  toast(u.following ? `✅ ${u.name} को Follow कर दिया` : `Unfollowed ${u.name}`);
+  renderOtherProfileView();
+}
+
+/* ---------------- PROFILE ---------------- */
+function fmtBday(dstr){
+  if(!dstr) return 'Set nahi kiya gaya';
+  const d = new Date(dstr+'T00:00:00');
+  return d.toLocaleDateString('hi-IN',{day:'numeric', month:'long', year:'numeric'});
+}
+
+function renderProfile(){
+  const p = state.profile;
+  document.getElementById('profileAvatarBig').style.background = p.color;
+  document.getElementById('profileAvatarBig').textContent = initials(p.name);
+  document.getElementById('profileNameView').textContent = p.name;
+  document.getElementById('bioView').textContent = p.bio;
+  document.getElementById('bioEdit').value = p.bio;
+  document.getElementById('bdayViewText').textContent = fmtBday(p.birthday);
+  document.getElementById('bdayEdit').value = p.birthday;
+  document.getElementById('nameView').textContent = p.name;
+  document.getElementById('nameEdit').value = p.name;
+  setProfileEditMode(false);
+}
+
+function setProfileEditMode(on){
+  state.profile.editing = on;
+  document.getElementById('profileEditBtn').textContent = on ? 'Cancel' : 'Edit';
+  document.getElementById('bioView').style.display = on ? 'none':'block';
+  document.getElementById('bioEdit').style.display = on ? 'block':'none';
+  document.getElementById('bdayView').style.display = on ? 'none':'flex';
+  document.getElementById('bdayEdit').style.display = on ? 'block':'none';
+  document.getElementById('nameView').style.display = on ? 'none':'block';
+  document.getElementById('nameEdit').style.display = on ? 'block':'none';
+  document.getElementById('profileSaveBtn').style.display = on ? 'block':'none';
+}
+
+function toggleProfileEdit(){
+  if(state.profile.editing){
+    renderProfile(); // cancel -> revert to saved values
+  } else {
+    setProfileEditMode(true);
+  }
+}
+
+function saveProfile(){
+  const p = state.profile;
+  p.name = document.getElementById('nameEdit').value.trim() || p.name;
+  p.bio = document.getElementById('bioEdit').value.trim();
+  p.birthday = document.getElementById('bdayEdit').value || p.birthday;
+  toast('✅ Profile update हो गई');
+  renderProfile();
+}
+
+/* ---------------- REELS (dedicated tab) ---------------- */
+function renderReels(){
+  const el = document.getElementById('reelsFeed');
+  el.innerHTML = state.reels.map(r=>`
+    <div class="reel-slide">
+      <div class="playicon">▶</div>
+      <div class="reel-side">
+        <div class="ricon">❤️<span>${r.likes}</span></div>
+        <div class="ricon">💬<span>${r.comments}</span></div>
+        <div class="ricon">↗️<span>Share</span></div>
+        <div class="ricon">🔖<span>Save</span></div>
+      </div>
+      <div class="reel-info">
+        <div class="rtag">REEL · Encrypted</div>
+        <div class="ruser" onclick="openOtherProfile('${r.uid}','reels')" style="cursor:pointer;"><div class="ravatar" style="background:${r.color}">${initials(r.user)}</div>${r.user}</div>
+        <div class="rcap">${r.cap}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------------- CHATS ---------------- */
+function renderChats(){
+  const el = document.getElementById('chatsList');
+  if(state.chats.length===0){ el.innerHTML = '<div class="empty-hint">कोई chat नहीं बची — सभी locked chats delete हो चुकी हैं।</div>'; return; }
+  el.innerHTML = state.chats.map(c=>`
+    <div class="list-row">
+      <div class="avatar" onclick="openOtherProfile('${c.uid}','chats')" style="background:${c.color};cursor:pointer;">${initials(c.name)}</div>
+      <div class="row-main" onclick="openChat('${c.id}')" style="cursor:pointer;">
+        <div class="row-title">${c.name} ${c.locked?'<span class="badge-locked">🔒 LOCKED</span>':''}</div>
+        <div class="row-sub ${c.locked?'blur':''}">${c.locked ? '•••••••••••' : c.last}</div>
+      </div>
+      <div class="row-time">${c.time}</div>
+      <button class="lock-btn ${c.locked?'on':''}" onclick="event.stopPropagation(); handleLockToggle('${c.id}','chat')">${c.locked?'🔒':'🔓'}</button>
+    </div>`).join('');
+}
+
+function renderGroups(){
+  const el = document.getElementById('groupsList');
+  el.innerHTML = state.groups.map(g=>`
+    <div class="list-row">
+      <div class="group-avatars">
+        <div class="avatar" style="background:#3DDC97">${initials(g.name)[0]}</div>
+        <div class="avatar" style="background:#F2B84B">${initials(g.name)[1]||'+'}</div>
+      </div>
+      <div class="row-main">
+        <div class="row-title">${g.name} ${g.locked?'<span class="badge-locked">🔒 LOCKED</span>':''}</div>
+        <div class="row-sub ${g.locked?'blur':''}">${g.locked ? '•••••••••' : g.last}</div>
+      </div>
+      <div class="row-time">${g.time}</div>
+      <button class="lock-btn ${g.locked?'on':''}" onclick="handleLockToggle('${g.id}','group')">${g.locked?'🔒':'🔓'}</button>
+    </div>`).join('');
+}
+
+function renderSearch(){
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const el = document.getElementById('searchResults');
+  if(!q){ el.innerHTML = '<div class="empty-hint">Chats, groups या contacts search करने के लिए टाइप करें</div>'; return; }
+
+  const chatMatches = state.chats.filter(c=>c.name.toLowerCase().includes(q));
+  const groupMatches = state.groups.filter(g=>g.name.toLowerCase().includes(q));
+  const userMatches = state.otherUsers.filter(u=>u.name.toLowerCase().includes(q));
+
+  if(chatMatches.length===0 && groupMatches.length===0 && userMatches.length===0){
+    el.innerHTML = '<div class="empty-hint">कोई result नहीं मिला</div>';
+    return;
+  }
+
+  const card = (name, sub, color, onclick, locked) => `
+    <div class="search-card" onclick="${onclick}">
+      <div class="search-thumb" style="background:linear-gradient(160deg, ${color}, #0B0F14)">
+        ${initials(name)}
+        <div class="search-play">▶</div>
+        ${locked ? '<div class="search-locked">🔒</div>' : ''}
+      </div>
+      <div class="search-meta">
+        <div class="search-name">${name}</div>
+        <div class="search-sub">${sub}</div>
+      </div>
+    </div>`;
+
+  let html = '';
+  if(chatMatches.length){
+    html += `<div class="search-section-label">Chats</div><div class="search-grid">` +
+      chatMatches.map(c=>card(c.name, c.locked ? 'Locked chat' : c.last, c.color, `openChat('${c.id}')`, c.locked)).join('') +
+      `</div>`;
+  }
+  if(groupMatches.length){
+    html += `<div class="search-section-label">Groups</div><div class="search-grid">` +
+      groupMatches.map(g=>card(g.name, g.members, '#3DDC97', `navigate('groups')`, g.locked)).join('') +
+      `</div>`;
+  }
+  if(userMatches.length){
+    html += `<div class="search-section-label">Contacts</div><div class="search-grid">` +
+      userMatches.map(u=>card(u.name, u.bio, u.color, `openOtherProfile('${u.id}','search')`, false)).join('') +
+      `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderSettings(){
+  document.getElementById('settingsProfileAvatar').style.background = state.profile.color;
+  document.getElementById('settingsProfileAvatar').textContent = initials(state.profile.name);
+  document.getElementById('settingsProfileName').textContent = state.profile.name;
+  document.getElementById('lockMethodVal').textContent = state.lockMethod==='pin'?'PIN':(state.lockMethod==='pattern'?'Pattern':'Face ID');
+  document.getElementById('lockMethodDesc').textContent = 'App खोलते समय यह method चलेगा';
+  const lockedOnes = [...state.chats, ...state.groups].filter(x=>x.locked);
+  const summary = document.getElementById('lockedChatsSummary');
+  if(lockedOnes.length===0){
+    summary.innerHTML = '<div class="settings-row"><div class="desc">अभी कोई chat locked नहीं है</div></div>';
+  } else {
+    summary.innerHTML = lockedOnes.map(x=>`<div class="settings-row"><div>${x.name}<div class="desc">${x.attempts}/5 galat attempts</div></div><span style="color:var(--amber)">🔒</span></div>`).join('');
+  }
+}
+
+function startCall(name,type,backTo){
+  document.getElementById('callAvatar').textContent = initials(name);
+  document.getElementById('callName').textContent = name;
+  document.getElementById('callStatusTxt').textContent = type==='video' ? 'Video call…' : 'Calling…';
+  state.callBackTo = backTo || 'chats';
+  navigate('call');
+}
+
+function callFromChat(type){
+  const c = state.chats.find(x=>x.id===state.activeChatId);
+  if(!c) return;
+  startCall(c.name, type, 'chatdetail');
+}
+
+/* ---------------- LOCK TOGGLE (list level) ---------------- */
+function findItem(id){ return state.chats.find(c=>c.id===id) || state.groups.find(g=>g.id===id); }
+
+function handleLockToggle(id, kind){
+  const item = findItem(id);
+  if(!item.locked){
+    openModal({type:'set-pin', id, kind});
+  } else {
+    openModal({type:'unlock-to-remove', id, kind});
+  }
+}
+
+/* ---------------- CHAT DETAIL ---------------- */
+function openChat(id){
+  const c = state.chats.find(x=>x.id===id);
+  if(c.locked && !c.unlockedThisSession){
+    openModal({type:'unlock-open', id, kind:'chat'});
+    return;
+  }
+  openChatDetailView(id);
+}
+
+function openChatDetailView(id){
+  const c = state.chats.find(x=>x.id===id);
+  state.activeChatId = id;
+  document.getElementById('cdAvatar').style.background = c.color;
+  document.getElementById('cdAvatar').textContent = initials(c.name);
+  document.getElementById('cdName').textContent = c.name;
+  document.getElementById('cdLockBtn').textContent = c.locked ? '🔒' : '🔓';
+  document.getElementById('cdLockBtn').className = 'lock-btn' + (c.locked?' on':'');
+  renderMsgs(c);
+  navigate('chatdetail');
+}
+
+function renderMsgs(c){
+  document.getElementById('cdMsgs').innerHTML = c.messages.map(m=>`<div class="msg ${m.from}">${m.text}</div>`).join('');
+}
+
+function sendDemoMessage(){
+  const input = document.getElementById('cdInput');
+  const txt = input.value.trim();
+  if(!txt) return;
+  const c = state.chats.find(x=>x.id===state.activeChatId);
+  c.messages.push({from:'out', text:txt});
+  c.last = txt; c.time='Now';
+  input.value='';
+  renderMsgs(c);
+}
+
+function toggleLockFromDetail(){
+  handleLockToggle(state.activeChatId, 'chat');
+}
+
+/* ---------------- MODAL (PIN set / unlock / remove / change app pin) ---------------- */
+function openModal(ctx){
+  state.modalCtx = ctx;
+  state.currentInput = '';
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.add('active');
+  const title = document.getElementById('modalTitle');
+  const sub = document.getElementById('modalSub');
+  const warn = document.getElementById('modalWarn');
+  warn.textContent = '';
+
+  if(ctx.type==='set-pin'){
+    title.textContent = 'Chat Lock सेट करें';
+    sub.textContent = 'इस chat के लिए एक नया 4-digit PIN बनाएं';
+  } else if(ctx.type==='unlock-open'){
+    const item = findItem(ctx.id);
+    title.textContent = item.name + ' — Locked';
+    sub.textContent = 'खोलने के लिए PIN डालें';
+    if(item.attempts>0) warn.textContent = `${item.attempts}/5 galat attempts. ${5-item.attempts} attempt बचे हैं।`;
+  } else if(ctx.type==='unlock-to-remove'){
+    title.textContent = 'Lock हटाएं';
+    sub.textContent = 'Lock हटाने के लिए मौजूदा PIN डालें';
+  } else if(ctx.type==='change-app-pin'){
+    title.textContent = 'नया App PIN';
+    sub.textContent = 'App खोलने के लिए नया 4-digit PIN डालें';
+  }
+  renderPinDots('modalPinDots', 0);
+  buildNumpad('modalNumpad', onModalPinKey);
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('active');
+  state.modalCtx = null;
+  state.currentInput = '';
+}
+
+function onModalPinKey(k){
+  if(k==='⌫'){ state.currentInput = state.currentInput.slice(0,-1); renderPinDots('modalPinDots', state.currentInput.length); return; }
+  if(state.currentInput.length>=4) return;
+  state.currentInput += k;
+  renderPinDots('modalPinDots', state.currentInput.length);
+  if(state.currentInput.length===4) processModalPin();
+}
+
+function processModalPin(){
+  const ctx = state.modalCtx;
+  const pin = state.currentInput;
+  const warn = document.getElementById('modalWarn');
+
+  if(ctx.type==='set-pin'){
+    const item = findItem(ctx.id);
+    item.locked = true; item.pin = pin; item.attempts = 0; item.unlockedThisSession=false;
+    toast('🔒 Chat lock सेट हो गया');
+    closeModal();
+    refreshCurrentList();
+    return;
+  }
+
+  if(ctx.type==='change-app-pin'){
+    state.appPin = pin;
+    toast('✅ App PIN बदल दिया गया');
+    closeModal();
+    return;
+  }
+
+  // unlock-open or unlock-to-remove: verify against item.pin
+  const item = findItem(ctx.id);
+  if(pin === item.pin){
+    item.attempts = 0;
+    if(ctx.type==='unlock-to-remove'){
+      item.locked = false; item.pin = null;
+      toast('🔓 Lock हटा दिया गया');
+    } else {
+      item.unlockedThisSession = true;
+      toast('🔓 Unlocked');
+      closeModal();
+      if(ctx.kind==='chat') openChatDetailView(ctx.id);
+      refreshCurrentList();
+      return;
+    }
+    closeModal();
+    refreshCurrentList();
+  } else {
+    item.attempts += 1;
+    state.currentInput='';
+    if(item.attempts >= 5){
+      // DELETE the chat/group messages
+      if(ctx.kind==='chat'){
+        item.messages = [];
+        item.last = '⚠️ Chat delete कर दी गई';
+        item.locked = false; item.pin = null; item.attempts = 0; item.unlockedThisSession=false;
+      } else {
+        item.last = '⚠️ Group data delete कर दिया गया';
+        item.locked = false; item.pin = null; item.attempts = 0;
+      }
+      warn.textContent = '';
+      closeModal();
+      toast('🗑️ 5 गलत PIN — यह chat delete कर दी गई है', true);
+      refreshCurrentList();
+    } else {
+      renderPinDots('modalPinDots', 4, true);
+      warn.textContent = `❌ गलत PIN — ${item.attempts}/5 attempts इस्तेमाल हो गए`;
+      warn.className = 'attempts-warn' + (item.attempts>=3?' danger':'');
+      setTimeout(()=>{ state.currentInput=''; renderPinDots('modalPinDots',0); }, 500);
+    }
+  }
+}
+
+function refreshCurrentList(){
+  if(state.currentScreen==='chats') renderChats();
+  if(state.currentScreen==='groups') renderGroups();
+  if(state.currentScreen==='settings') renderSettings();
+}
+
+function openChangeAppPin(){
+  openModal({type:'change-app-pin'});
+}
+
+/* ---------------- INIT ---------------- */
+setLockMethod('pin');
+
+// live clock
+function tick(){
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+tick(); setInterval(tick, 30000);
+</script>
+</body>
+</html>
