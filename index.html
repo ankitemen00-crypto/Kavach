@@ -2994,7 +2994,36 @@ function processModalPin(){
         item.last = '⚠️ Group data delete कर दिया गया';
         item.locked = false; item.pin = null; item.attempts = 0;
       }
-      warn.textContent = ''; getElementById('clock').textContent = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+      warn.textContent = '';
+      closeModal();
+      toast('🗑️ 5 गलत PIN — यह chat delete कर दी गई है', true);
+      refreshCurrentList();
+    } else {
+      renderPinDots('modalPinDots', 4, true);
+      warn.textContent = `❌ गलत PIN — ${item.attempts}/5 attempts इस्तेमाल हो गए`;
+      warn.className = 'attempts-warn' + (item.attempts>=3?' danger':'');
+      setTimeout(()=>{ state.currentInput=''; renderPinDots('modalPinDots',0); }, 500);
+    }
+  }
+}
+
+function refreshCurrentList(){
+  if(state.currentScreen==='chats') renderChats();
+  if(state.currentScreen==='groups') renderGroups();
+  if(state.currentScreen==='settings') renderSettings();
+}
+
+function openChangeAppPin(){
+  openModal({type:'change-app-pin'});
+}
+
+/* ---------------- INIT ---------------- */
+setLockMethod('pin');
+
+// live clock
+function tick(){
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 tick(); setInterval(tick, 30000);
 </script>
