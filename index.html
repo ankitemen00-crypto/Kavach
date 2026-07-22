@@ -449,6 +449,14 @@
             <label>Password बनाएं</label>
             <input type="password" id="suPin" placeholder="कम से कम 4 characters का password">
           </div>
+          <div class="field">
+            <label>App Lock PIN बनाएं (4-digit)</label>
+            <input type="password" id="suLockPin" placeholder="अपना 4-digit lock PIN चुनें" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>App Lock PIN दोबारा डालें</label>
+            <input type="password" id="suLockPinConfirm" placeholder="PIN confirm करें" maxlength="4" inputmode="numeric">
+          </div>
           <div class="field-err" id="signupErr"></div>
           <button class="btn-primary" onclick="startSignupVerification()">Account बनाएं</button>
           <div class="divider">या</div>
@@ -1053,6 +1061,11 @@ function enterUserApp(accountData){
   if(accountData && accountData.name){
     state.profile.name = accountData.name;
   }
+  state.appPin = (accountData && accountData.appLockPin) ? accountData.appLockPin : null;
+  state.settingFirstLockPin = false;
+  state.newLockPinStage = null;
+  setLockMethod('pin');
+  loadDirectoryUsers();
 }
 
 function logoutToAuth(){
@@ -1073,6 +1086,8 @@ function startSignupVerification(){
   const email = document.getElementById('suEmail').value.trim();
   const phone = document.getElementById('suPhone').value.trim();
   const pin = document.getElementById('suPin').value.trim();
+  const lockPin = document.getElementById('suLockPin').value.trim();
+  const lockPinConfirm = document.getElementById('suLockPinConfirm').value.trim();
   const err = document.getElementById('signupErr');
   err.textContent = '';
 
@@ -1080,8 +1095,10 @@ function startSignupVerification(){
   if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
   if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
   if(pin.length<4){ err.textContent='⚠️ कम से कम 4 characters का password बनाएं'; return; }
+  if(!/^\d{4}$/.test(lockPin)){ err.textContent='⚠️ App Lock PIN 4 digits का होना चाहिए'; return; }
+  if(lockPin !== lockPinConfirm){ err.textContent='⚠️ App Lock PIN दोनों बार same नहीं है'; return; }
 
-  otpState.pendingSignup = { name, email, phone, pin, role: signupRole };
+  otpState.pendingSignup = { name, email, phone, pin, appLockPin: lockPin, role: signupRole };
   atoast('⏳ Account बनाया जा रहा है...');
   auth.createUserWithEmailAndPassword(email, pinToPassword(pin)).then(cred=>{
     return cred.user.sendEmailVerification().then(()=>{
@@ -1182,7 +1199,7 @@ function finalizeSignup(){
   const p = otpState.pendingSignup;
   const uid = auth.currentUser.uid;
   db.collection('accounts').doc(uid).set({
-    name: p.name, email: p.email, phone: p.phone, pin: p.pin, role: p.role,
+    name: p.name, email: p.email, phone: p.phone, pin: p.pin, appLockPin: p.appLockPin, role: p.role,
     status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(()=>{
     auth.signOut();
@@ -1191,6 +1208,8 @@ function finalizeSignup(){
     switchAuthTab('login');
     document.getElementById('loginEmail').value = p.email;
     document.getElementById('loginPhone').value = p.phone;
+    document.getElementById('suLockPin').value = '';
+    document.getElementById('suLockPinConfirm').value = '';
   }).catch(e=>{
     atoast('❌ Firestore save fail: ' + e.message, true);
   });
@@ -1333,7 +1352,7 @@ function removeUser(id){
 /* ---------------- STATE ---------------- */
 const state = {
   lockMethod: 'pin',
-  appPin: '1234',
+  appPin: null,
   pattern: [0,4,8],
   currentInput: '',
   patternInput: [],
@@ -1429,7 +1448,7 @@ function navigate(screen){
   if(screen==='reels') renderReels();
   if(screen==='chats') renderChats();
   if(screen==='groups') renderGroups();
-  if(screen==='search') renderSearch();
+  if(screen==='search'){ renderSearch(); loadDirectoryUsers(); }
   if(screen==='settings') renderSettings();
   if(screen==='profile') renderProfile();
   if(screen==='otherprofile') renderOtherProfileView();
@@ -1443,7 +1462,7 @@ function setLockMethod(m){
   document.getElementById('lockPinArea').style.display = m==='pin' ? 'block':'none';
   document.getElementById('lockPatternArea').style.display = m==='pattern' ? 'block':'none';
   document.getElementById('lockFaceArea').style.display = m==='face' ? 'block':'none';
-  document.getElementById('lockStatus').textContent = '';
+  document.getElementById('lockStatus').textContent = (m==='pin' && state.appPin===null) ? 'अपना नया 4-digit Lock PIN बनाएं' : '';
   document.getElementById('lockStatus').className = 'lock-status';
   state.currentInput = ''; state.patternInput = [];
   if(m==='pin') buildNumpad('lockNumpad', onLockPinKey);
@@ -1480,6 +1499,31 @@ function onLockPinKey(k){
   state.currentInput += k;
   renderPinDots('lockPinDots', state.currentInput.length);
   if(state.currentInput.length===4){
+    if(state.appPin===null){
+      // no PIN set yet on this account (e.g. Google sign-up) — let the user create one now
+      if(state.newLockPinStage!=='confirm'){
+        state.newLockPinFirst = state.currentInput;
+        state.newLockPinStage = 'confirm';
+        statusEl.textContent = 'PIN दोबारा डालें confirm करने के लिए'; statusEl.className='lock-status';
+        setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 300);
+      } else {
+        if(state.currentInput === state.newLockPinFirst){
+          state.appPin = state.currentInput;
+          state.newLockPinStage = null;
+          if(auth.currentUser){
+            db.collection('accounts').doc(auth.currentUser.uid).set({ appLockPin: state.appPin }, { merge:true }).catch(()=>{});
+          }
+          statusEl.textContent = 'Lock PIN सेट हो गया ✓'; statusEl.className='lock-status';
+          setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+        } else {
+          statusEl.textContent = 'PIN match नहीं हुआ, फिर से शुरू करें'; statusEl.className='lock-status err';
+          renderPinDots('lockPinDots', 4, true);
+          state.newLockPinStage = null;
+          setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 500);
+        }
+      }
+      return;
+    }
     if(state.currentInput === state.appPin){
       statusEl.textContent = 'Unlocked ✓'; statusEl.className='lock-status';
       setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
@@ -1954,6 +1998,33 @@ function renderGroups(){
     </div>`).join('');
 }
 
+const DIRECTORY_COLORS = ['#3DDC97','#F2B84B','#E5484D','#7C8A9A','#1E90A0'];
+async function loadDirectoryUsers(){
+  if(!auth.currentUser) return;
+  try{
+    const snap = await db.collection('accounts').where('role','==','user').get();
+    let i = 0;
+    snap.forEach(doc=>{
+      if(doc.id === auth.currentUser.uid) return; // don't list yourself
+      const d = doc.data();
+      if(!d || !d.name) return;
+      const existing = state.otherUsers.find(u=>u.id===doc.id);
+      const color = DIRECTORY_COLORS[i++ % DIRECTORY_COLORS.length];
+      if(existing){
+        existing.name = d.name; existing.email = d.email||''; existing.phone = d.phone||'';
+      } else {
+        state.otherUsers.push({
+          id: doc.id, name: d.name, color, bio: d.email||'', email: d.email||'', phone: d.phone||'',
+          birthday: '', following:false, followers:0
+        });
+      }
+    });
+  } catch(e){
+    // silent fail — local demo contacts still work for search
+  }
+  if(state.currentScreen==='search') renderSearch();
+}
+
 function renderSearch(){
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
   const el = document.getElementById('searchResults');
@@ -1961,7 +2032,11 @@ function renderSearch(){
 
   const chatMatches = state.chats.filter(c=>c.name.toLowerCase().includes(q));
   const groupMatches = state.groups.filter(g=>g.name.toLowerCase().includes(q));
-  const userMatches = state.otherUsers.filter(u=>u.name.toLowerCase().includes(q));
+  const userMatches = state.otherUsers.filter(u=>
+    u.name.toLowerCase().includes(q) ||
+    (u.email && u.email.toLowerCase().includes(q)) ||
+    (u.phone && u.phone.includes(q))
+  );
 
   if(chatMatches.length===0 && groupMatches.length===0 && userMatches.length===0){
     el.innerHTML = '<div class="empty-hint">कोई result नहीं मिला</div>';
