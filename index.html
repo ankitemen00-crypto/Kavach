@@ -480,6 +480,13 @@
             <label>App Lock PIN दोबारा डालें</label>
             <input type="password" id="suLockPinConfirm" placeholder="PIN confirm करें" maxlength="4" inputmode="numeric">
           </div>
+          <div class="field">
+            <label>Verification कैसे करें?</label>
+            <div class="authtabs" style="margin-top:0;">
+              <div class="authtab active" id="verifyEmailTab" onclick="setVerifyMethod('email')">📧 Email OTP</div>
+              <div class="authtab" id="verifyPhoneTab" onclick="setVerifyMethod('phone')">📲 Phone OTP</div>
+            </div>
+          </div>
           <div class="field-err" id="signupErr"></div>
           <button class="btn-primary" onclick="startSignupVerification()">Account बनाएं</button>
           <div class="divider">या</div>
@@ -554,6 +561,10 @@
         <div class="stat"><div class="num" id="statActive">0</div><div class="lbl">Active</div></div>
         <div class="stat"><div class="num" id="statSuspended">0</div><div class="lbl">Suspended</div></div>
         <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Blocked</div></div>
+      </div>
+      <div style="display:flex; gap:8px; padding:10px 16px 0;">
+        <button class="method-btn active" id="dashTabUsers" style="flex:1;" onclick="setDashView('users')">Users</button>
+        <button class="method-btn" id="dashTabTrash" style="flex:1;" onclick="setDashView('trash')">🗑️ Trash (<span id="trashCount">0</span>)</button>
       </div>
       <div class="content" id="userList"></div>
     </div>
@@ -1050,6 +1061,12 @@ function setSignupRole(role){
   document.getElementById('roleUserTab').classList.toggle('active', role==='user');
   document.getElementById('roleAdminTab').classList.toggle('active', role==='admin');
 }
+let signupVerifyMethod = 'email';
+function setVerifyMethod(m){
+  signupVerifyMethod = m;
+  document.getElementById('verifyEmailTab').classList.toggle('active', m==='email');
+  document.getElementById('verifyPhoneTab').classList.toggle('active', m==='phone');
+}
 function showStep(step){
   ['stepChooser','stepEmailVerify','stepOtp','stepForgotChoose','stepNewPin'].forEach(id=>{
     document.getElementById(id).style.display = (id===step) ? 'block' : 'none';
@@ -1110,6 +1127,9 @@ function attemptLogin(){
 
 /* checks block/suspend status; auto-reactivates an expired temporary suspension */
 async function checkAccountStatus(uid, data){
+  if(data.trashed){
+    return { ok:false, message:'⛔ यह account delete कर दिया गया है — admin से contact करें', data };
+  }
   if(data.status === 'blocked'){
     return { ok:false, message:'⛔ यह account block कर दिया गया है — admin से contact करें', data };
   }
@@ -1258,7 +1278,7 @@ function markDeviceSignedUp(email){
 }
 
 /* ---------------- SIGNUP: step 1 — create real Firebase account ---------------- */
-function startSignupVerification(){
+async function startSignupVerification(){
   const name = document.getElementById('suName').value.trim();
   const email = document.getElementById('suEmail').value.trim();
   const phone = document.getElementById('suPhone').value.trim();
@@ -1278,11 +1298,32 @@ function startSignupVerification(){
   if(signupRole !== 'admin'){
     const deviceCheck = checkDeviceSignupAllowed(email);
     if(!deviceCheck.ok){ err.textContent = '⚠️ ' + deviceCheck.message; return; }
+  } else {
+    // ---- Admin single-email lock: sirf ek hi email admin ban sakta hai. ----
+    // Ek baar admin account ban jaaye, uske baad koi bhi doosri email admin
+    // ke roop mein signup nahi kar sakti (verified admin already exist karta hai).
+    err.textContent = 'Admin account check हो रहा है...';
+    try{
+      const existingAdmins = await db.collection('accounts').where('role','==','admin').limit(1).get();
+      if(!existingAdmins.empty){
+        err.textContent = '⚠️ Admin account पहले से बन चुका है — सिर्फ़ एक ही Admin allowed है। उस email से login करें।';
+        return;
+      }
+    }catch(e){
+      err.textContent = '⚠️ Admin check fail हुआ: ' + e.message;
+      return;
+    }
+    err.textContent = '';
   }
 
-  otpState.pendingSignup = { name, email, phone, pin, appLockPin: lockPin, role: signupRole };
+  otpState.pendingSignup = { name, email, phone, pin, appLockPin: lockPin, role: signupRole, verifyMethod: signupVerifyMethod };
   atoast('⏳ Account बनाया जा रहा है...');
   auth.createUserWithEmailAndPassword(email, pinToPassword(pin)).then(cred=>{
+    if(signupVerifyMethod === 'phone'){
+      // Phone OTP चुना गया — email-link step skip करके सीधा phone OTP भेजो
+      beginPhoneOtp();
+      return;
+    }
     return cred.user.sendEmailVerification().then(()=>{
       document.getElementById('emailVerifyLabel').innerHTML = '<b>'+email+'</b> पर real verification link भेज दी गई है';
       document.getElementById('emailVerifyWarn').textContent = '';
@@ -1308,7 +1349,8 @@ function checkEmailVerified(){
   auth.currentUser.reload().then(()=>{
     if(auth.currentUser.emailVerified){
       document.getElementById('emailVerifyWarn').textContent = '';
-      beginPhoneOtp();
+      // Email OTP method चुना गया था — phone OTP की ज़रूरत नहीं, seedha account finalize karo
+      finalizeSignup();
     } else {
       document.getElementById('emailVerifyWarn').textContent = '⚠️ अभी तक verify नहीं हुआ — पहले email में link पर click करें';
     }
@@ -1469,6 +1511,7 @@ function colorFor(id){
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
+let dashView = 'users'; // 'users' | 'trash'
 async function loadUsersFromFirestore(){
   document.getElementById('userList').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Loading users…</div>';
   try{
@@ -1477,7 +1520,7 @@ async function loadUsersFromFirestore(){
       const v = d.data();
       return { id:d.id, name:v.name||'User', color:colorFor(d.id), role:'Member',
         status:v.status||'active', suspendUntil:v.suspendUntil||null, chatsLocked:0, pin:v.pin||'----', pinVisible:false,
-        email:v.email||'', phone:v.phone||'' };
+        email:v.email||'', phone:v.phone||'', trashed:v.trashed||false };
     });
     // auto-reactivate anyone whose temporary suspension has passed
     const now = Date.now();
@@ -1491,6 +1534,13 @@ async function loadUsersFromFirestore(){
     atoast('❌ Users load नहीं हुए: ' + e.message, true);
     users = [];
   }
+  renderUsers();
+}
+
+function setDashView(v){
+  dashView = v;
+  document.getElementById('dashTabUsers').classList.toggle('active', v==='users');
+  document.getElementById('dashTabTrash').classList.toggle('active', v==='trash');
   renderUsers();
 }
 
@@ -1529,12 +1579,30 @@ function statusTagClass(u){
 }
 
 function renderUsers(){
-  document.getElementById('statTotal').textContent = users.length;
-  document.getElementById('statActive').textContent = users.filter(u=>u.status==='active').length;
-  document.getElementById('statSuspended').textContent = users.filter(u=>u.status==='suspended').length;
-  document.getElementById('statBlocked').textContent = users.filter(u=>u.status==='blocked').length;
+  const visible = users.filter(u => dashView==='trash' ? u.trashed : !u.trashed);
+  document.getElementById('statTotal').textContent = users.filter(u=>!u.trashed).length;
+  document.getElementById('statActive').textContent = users.filter(u=>!u.trashed && u.status==='active').length;
+  document.getElementById('statSuspended').textContent = users.filter(u=>!u.trashed && u.status==='suspended').length;
+  document.getElementById('statBlocked').textContent = users.filter(u=>!u.trashed && u.status==='blocked').length;
+  document.getElementById('trashCount').textContent = users.filter(u=>u.trashed).length;
 
-  document.getElementById('userList').innerHTML = users.length ? users.map(u=>`
+  if(dashView==='trash'){
+    document.getElementById('userList').innerHTML = visible.length ? visible.map(u=>`
+      <div class="urow">
+        <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+        <div class="umain">
+          <div class="uname">${u.name} <span class="tag suspended">TRASHED</span></div>
+          <div class="usub">${u.email || u.phone || ''}</div>
+        </div>
+        <div class="actions">
+          <button class="abtn mint" title="Restore करें" onclick="restoreUser('${u.id}')">♻️</button>
+          <button class="abtn danger" title="Permanently delete करें" onclick="removeUser('${u.id}')">🗑️</button>
+        </div>
+      </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">Trash खाली है</div>';
+    return;
+  }
+
+  document.getElementById('userList').innerHTML = visible.length ? visible.map(u=>`
     <div class="urow">
       <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
       <div class="umain">
@@ -1549,7 +1617,7 @@ function renderUsers(){
         <button class="abtn ${u.status==='blocked'?'mint':''}" title="${u.status==='blocked'?'Unblock':'Block'}" onclick="toggleBlock('${u.id}')">🚫</button>
         <button class="abtn ${u.status==='suspended'?'mint':''}" title="${u.status==='suspended'?'Reactivate':'Suspend'}" onclick="toggleSuspend('${u.id}')">⛔</button>
         <button class="abtn" title="कुछ समय के लिए suspend करें" onclick="tempSuspendUser('${u.id}')">⏳</button>
-        <button class="abtn danger" title="Delete user" onclick="removeUser('${u.id}')">🗑️</button>
+        <button class="abtn" title="Trash में भेजें (Temporary Delete)" onclick="tempDeleteUser('${u.id}')">🗑️</button>
       </div>
     </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">कोई registered user नहीं है</div>';
 }
@@ -1600,12 +1668,34 @@ function tempSuspendUser(id){
   renderUsers();
 }
 
+/* ---- Temporary Delete (Trash) vs Permanent Delete ----
+   tempDeleteUser: account Firestore mein rehta hai (data safe), bas 'trashed'
+   flag set ho jaata hai — login block ho jaata hai, admin chaahe to Restore kar sakta hai.
+   removeUser: sirf Trash se hi call hota hai, aur ye permanent hai — Firestore document
+   hamesha ke liye delete ho jaata hai, wapas nahi aa sakta. */
+function tempDeleteUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!confirm(`${u.name} को Trash में भेजें? (Account data safe रहेगा, login block हो जाएगा, बाद में Restore कर सकते हैं)`)) return;
+  u.trashed = true;
+  db.collection('accounts').doc(id).set({ trashed:true, trashedAt: Date.now() }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(`🗑️ ${u.name} Trash में भेज दिया गया (Restore किया जा सकता है)`);
+  renderUsers();
+}
+
+function restoreUser(id){
+  const u = users.find(x=>x.id===id);
+  u.trashed = false;
+  db.collection('accounts').doc(id).set({ trashed:false, trashedAt:null }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(`♻️ ${u.name} restore कर दिया गया`);
+  renderUsers();
+}
+
 function removeUser(id){
   const u = users.find(x=>x.id===id);
-  if(!confirm(`${u.name} को permanently delete करें? (Firestore account data delete होगा और login block हो जाएगा)`)) return;
+  if(!confirm(`${u.name} को PERMANENTLY delete करें? यह wapas नहीं आएगा — Firestore account data हमेशा के लिए मिट जाएगा।`)) return;
   db.collection('accounts').doc(id).delete().catch(e=>atoast('❌ '+e.message, true));
   users = users.filter(x=>x.id!==id);
-  atoast(`🗑️ ${u.name} delete कर दिया गया`);
+  atoast(`🗑️ ${u.name} permanently delete कर दिया गया`);
   renderUsers();
 }
 </script>
