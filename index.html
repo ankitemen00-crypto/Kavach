@@ -403,14 +403,14 @@
             </div>
           </div>
           <div class="field">
-            <label>PIN</label>
-            <input type="password" id="loginPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+            <label>Password</label>
+            <input type="password" id="loginPin" placeholder="अपना password डालें">
           </div>
           <div class="field-err" id="loginErr"></div>
           <button class="btn-primary" onclick="attemptLogin()">Login</button>
           <div class="divider">या</div>
           <button class="btn-google" onclick="googleAuth('login')"><span class="gicon"></span> Google से Continue करें</button>
-          <div class="link-row"><a onclick="goForgot()">PIN भूल गए?</a></div>
+          <div class="link-row"><a onclick="goForgot()">Password भूल गए?</a></div>
         </div>
 
         <!-- SIGNUP FORM -->
@@ -435,8 +435,8 @@
             </div>
           </div>
           <div class="field">
-            <label>नया PIN बनाएं</label>
-            <input type="password" id="suPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+            <label>Password बनाएं</label>
+            <input type="password" id="suPin" placeholder="कम से कम 4 characters का password">
           </div>
           <div class="field-err" id="signupErr"></div>
           <button class="btn-primary" onclick="startSignupVerification()">Account बनाएं</button>
@@ -780,7 +780,7 @@
     <button class="navbtn active" data-s="home" onclick="navigate('home')">🏠<span>Home</span></button>
     <button class="navbtn" data-s="reels" onclick="navigate('reels')">🎬<span>Reels</span></button>
     <button class="navbtn" data-s="chats" onclick="navigate('chats')">💬<span>Chats</span></button>
-    <button class="navbtn" data-s="groups" onclick="navigate('groups')">👥<span>Groups</span></button>
+    <button class="navbtn" data-s="reels" onclick="navigate('reels')">📺<span>YouTube</span></button>
     <button class="navbtn" data-s="search" onclick="navigate('search')">🔍<span>Search</span></button>
     <button class="navbtn" data-s="profile" onclick="navigate('profile')">👤<span>Profile</span></button>
   </div>
@@ -888,7 +888,7 @@ function attemptLogin(){
 
   if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
   if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
-  if(!/^\d{4}$/.test(pin)){ err.textContent='⚠️ 4-digit PIN डालें'; return; }
+  if(pin.length<4){ err.textContent='⚠️ Password डालें'; return; }
 
   if(ADMIN_PIN_OPTIONS.includes(pin)){
     enterDashboard();
@@ -1019,7 +1019,7 @@ function startSignupVerification(){
   if(!name){ err.textContent='⚠️ नाम डालें'; return; }
   if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
   if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
-  if(!/^\d{4}$/.test(pin)){ err.textContent='⚠️ 4-digit PIN बनाएं'; return; }
+  if(pin.length<4){ err.textContent='⚠️ कम से कम 4 characters का password बनाएं'; return; }
 
   otpState.pendingSignup = { name, email, phone, pin, role: signupRole };
   atoast('⏳ Account बनाया जा रहा है...');
@@ -1407,7 +1407,7 @@ function onLockPinKey(k){
   if(state.currentInput.length===4){
     if(state.currentInput === state.appPin){
       statusEl.textContent = 'Unlocked ✓'; statusEl.className='lock-status';
-      setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+      setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
     } else {
       statusEl.textContent = 'Galat PIN, dobara try karein'; statusEl.className='lock-status err';
       renderPinDots('lockPinDots', 4, true);
@@ -1438,7 +1438,7 @@ function onLockPatternDone(){
   const match = JSON.stringify(state.patternInput)===JSON.stringify(state.pattern);
   if(match){
     statusEl.textContent='Unlocked ✓'; statusEl.className='lock-status';
-    setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+    setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
   } else {
     statusEl.textContent='Galat pattern, dobara try karein'; statusEl.className='lock-status err';
     document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>n.classList.add('err'));
@@ -1457,7 +1457,7 @@ document.getElementById('faceScanBtn').onclick = function(){
   setTimeout(()=>{
     circle.classList.remove('scanning');
     statusEl.textContent = 'Face verified ✓';
-    setTimeout(()=>{ navigate('home'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+    setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
   }, 1300);
 };
 
