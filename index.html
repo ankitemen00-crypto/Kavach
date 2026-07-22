@@ -659,6 +659,21 @@
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-label">App Permissions</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>📷 Camera</div><button class="method-btn" id="settPermCameraBtn" onclick="requestPermission('camera')">Allow</button></div>
+          <div class="settings-row"><div>🎤 Microphone</div><button class="method-btn" id="settPermMicBtn" onclick="requestPermission('microphone')">Allow</button></div>
+          <div class="settings-row"><div>🖼️ Gallery</div><button class="method-btn" id="settPermGalleryBtn" onclick="requestPermission('gallery')">Allow</button></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Email</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Email<div class="desc" id="settEmailCurrent"></div></div><button class="method-btn" onclick="openChangeEmail()">बदलें</button></div>
+          <div class="settings-row"><div class="desc">Email हर 7 दिन में सिर्फ़ एक बार बदल सकते हैं</div></div>
+        </div>
+      </div>
+      <div class="settings-section">
         <div class="settings-label">Account</div>
         <div class="settings-card">
           <div class="settings-row" onclick="logoutToAuth()" style="cursor:pointer;"><div style="color:var(--danger); font-weight:700;">Logout</div><span>→</span></div>
@@ -834,12 +849,18 @@
       <button class="btn-primary" id="profileSaveBtn" style="display:none; margin-top:6px;" onclick="saveProfile()">Save Profile</button>
 
       <div class="settings-section" style="margin-top:22px;">
-        <div class="settings-label">My Stories</div>
+        <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>My Stories</span>
+          <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openStoryCreator()">+ Story</button>
+        </div>
         <div class="search-grid" id="myStoriesGrid"></div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-label">My Reels</div>
+        <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>My Reels</span>
+          <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openReelCreator()">+ Reel</button>
+        </div>
         <div class="search-grid" id="myReelsGrid"></div>
       </div>
     </div>
@@ -889,6 +910,48 @@
       <div class="pindots" id="modalPinDots" style="margin-top:22px;"></div>
       <div class="attempts-warn" id="modalWarn"></div>
       <div class="numpad" id="modalNumpad" style="margin-top:24px;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Reel Creator -->
+  <div class="modal-overlay" id="reelCreatorOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeReelCreator()">✕</button>
+      <div class="modal-title">Reel बनाएं</div>
+      <div class="modal-sub">Source चुनें और caption डालें</div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button class="method-btn" id="reelSrcCameraBtn" style="flex:1;" onclick="pickReelSource('camera')">📷 Camera</button>
+        <button class="method-btn" id="reelSrcGalleryBtn" style="flex:1;" onclick="pickReelSource('gallery')">🖼️ Gallery</button>
+      </div>
+      <div class="desc" id="reelSourceStatus" style="margin-top:8px; min-height:14px;"></div>
+      <input type="text" class="song-search-input" id="reelCaptionInput" placeholder="Caption लिखें...">
+      <button class="btn-primary" style="margin-top:16px;" onclick="submitReel()">Reel Post करें</button>
+    </div>
+  </div>
+
+  <!-- MODAL: App Permissions -->
+  <div class="modal-overlay" id="permissionsOverlay">
+    <div class="modal-sheet">
+      <div class="modal-title">App Permissions चाहिए</div>
+      <div class="modal-sub">Story/Reel बनाने के लिए इन्हें allow करें</div>
+      <div class="settings-card" style="margin-top:14px; text-align:left;">
+        <div class="settings-row"><div>📷 Camera<div class="desc">Photo/Video capture के लिए</div></div><button class="method-btn" id="permCameraBtn" onclick="requestPermission('camera')">Allow</button></div>
+        <div class="settings-row"><div>🎤 Microphone<div class="desc">Voice/Video sound के लिए</div></div><button class="method-btn" id="permMicBtn" onclick="requestPermission('microphone')">Allow</button></div>
+        <div class="settings-row"><div>🖼️ Gallery<div class="desc">Photos/Videos upload के लिए</div></div><button class="method-btn" id="permGalleryBtn" onclick="requestPermission('gallery')">Allow</button></div>
+      </div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="closePermissionsPrompt()">Continue</button>
+    </div>
+  </div>
+
+  <!-- MODAL: Change Email -->
+  <div class="modal-overlay" id="emailChangeOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeChangeEmail()">✕</button>
+      <div class="modal-title">Email बदलें</div>
+      <div class="modal-sub" id="emailChangeSub">नया email address डालें</div>
+      <input type="email" class="song-search-input" id="newEmailInput" placeholder="नया email...">
+      <div style="color:var(--danger); font-size:11px; font-weight:600; min-height:14px; margin-top:6px;" id="emailChangeErr"></div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="submitEmailChange()">Email Update करें</button>
     </div>
   </div>
 
@@ -1024,7 +1087,8 @@ async function finishGoogleSignIn(user, mode){
   let data;
   if(!snap.exists){
     const role = (mode==='signup' && signupRole==='admin') ? 'admin' : 'user';
-    data = { name:user.displayName||'Google User', email:user.email||'', phone:'', role, provider:'google' };
+    data = { name:user.displayName||'Google User', email:user.email||'', phone:'', role, provider:'google',
+      permissionsAsked:false, permissions:{camera:null, microphone:null, gallery:null}, lastEmailChangeAt:null };
     await ref.set(data);
   } else {
     data = snap.data();
@@ -1088,6 +1152,10 @@ function enterUserApp(accountData){
   if(accountData && accountData.name){
     state.profile.name = accountData.name;
   }
+  state.profile.email = accountData ? (accountData.email || '') : '';
+  state.lastEmailChangeAt = accountData ? (accountData.lastEmailChangeAt || null) : null;
+  state.permissions = (accountData && accountData.permissions) ? accountData.permissions : {camera:null, microphone:null, gallery:null};
+  state.needsPermissionsPrompt = !(accountData && accountData.permissionsAsked);
   state.appPin = (accountData && accountData.appLockPin) ? accountData.appLockPin : null;
   state.settingFirstLockPin = false;
   state.newLockPinStage = null;
@@ -1227,6 +1295,7 @@ function finalizeSignup(){
   const uid = auth.currentUser.uid;
   db.collection('accounts').doc(uid).set({
     name: p.name, email: p.email, phone: p.phone, pin: p.pin, appLockPin: p.appLockPin, role: p.role,
+    permissionsAsked: false, permissions: {camera:null, microphone:null, gallery:null}, lastEmailChangeAt: null,
     status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(()=>{
     auth.signOut();
@@ -1432,12 +1501,16 @@ const state = {
     {cap:'Sunset vibes yaar 🌅✨', likes:'128', comments:'12'},
     {cap:'Weekend trip recap 🚗', likes:'340', comments:'28'},
   ],
+  permissions: {camera:null, microphone:null, gallery:null},
+  needsPermissionsPrompt: false,
+  lastEmailChangeAt: null,
   storyDraft:{ filterId:'none', filterCss:'none', caption:'', song:null, hiddenFrom:[] },
   profile: {
     name:'Aap',
     color:'#3DDC97',
     bio:'Privacy पहले, बाकी सब बाद में। 🛡',
     birthday:'2000-01-15',
+    email:'',
     editing:false
   }
 };
@@ -1491,6 +1564,15 @@ function navigate(screen){
   if(screen==='notifications') renderNotifications();
   if(screen==='otherprofile') renderOtherProfileView();
   if(screen==='storycreate') renderStoryCreator();
+}
+
+function afterUnlockEnter(){
+  navigate('reels');
+  document.getElementById('bottomnav').style.display='flex';
+  if(state.needsPermissionsPrompt){
+    state.needsPermissionsPrompt = false;
+    setTimeout(openPermissionsPrompt, 400);
+  }
 }
 
 /* ---------------- LOCK SCREEN ---------------- */
@@ -1552,7 +1634,7 @@ function onLockPinKey(k){
             db.collection('accounts').doc(auth.currentUser.uid).set({ appLockPin: state.appPin }, { merge:true }).catch(()=>{});
           }
           statusEl.textContent = 'Lock PIN सेट हो गया ✓'; statusEl.className='lock-status';
-          setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+          setTimeout(afterUnlockEnter, 350);
         } else {
           statusEl.textContent = 'PIN match नहीं हुआ, फिर से शुरू करें'; statusEl.className='lock-status err';
           renderPinDots('lockPinDots', 4, true);
@@ -1564,7 +1646,7 @@ function onLockPinKey(k){
     }
     if(state.currentInput === state.appPin){
       statusEl.textContent = 'Unlocked ✓'; statusEl.className='lock-status';
-      setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+      setTimeout(afterUnlockEnter, 350);
     } else {
       statusEl.textContent = 'Galat PIN, dobara try karein'; statusEl.className='lock-status err';
       renderPinDots('lockPinDots', 4, true);
@@ -1595,7 +1677,7 @@ function onLockPatternDone(){
   const match = JSON.stringify(state.patternInput)===JSON.stringify(state.pattern);
   if(match){
     statusEl.textContent='Unlocked ✓'; statusEl.className='lock-status';
-    setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+    setTimeout(afterUnlockEnter, 350);
   } else {
     statusEl.textContent='Galat pattern, dobara try karein'; statusEl.className='lock-status err';
     document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>n.classList.add('err'));
@@ -1614,7 +1696,7 @@ document.getElementById('faceScanBtn').onclick = function(){
   setTimeout(()=>{
     circle.classList.remove('scanning');
     statusEl.textContent = 'Face verified ✓';
-    setTimeout(()=>{ navigate('reels'); document.getElementById('bottomnav').style.display='flex'; }, 350);
+    setTimeout(afterUnlockEnter, 350);
   }, 1300);
 };
 
@@ -1744,6 +1826,122 @@ function viewMyStory(i){
   const s = state.myStories[i];
   if(!s) return;
   toast('📖 ' + (s.caption || 'Story') + (s.song ? ' 🎵' : ''));
+}
+
+/* ---------------- APP PERMISSIONS ---------------- */
+function openPermissionsPrompt(){
+  document.getElementById('permissionsOverlay').classList.add('active');
+  updatePermissionUI();
+}
+function closePermissionsPrompt(){
+  document.getElementById('permissionsOverlay').classList.remove('active');
+  savePermissionsToAccount();
+}
+
+async function requestPermission(kind){
+  if(kind==='gallery'){
+    state.permissions.gallery = true;
+    updatePermissionUI();
+    savePermissionsToAccount();
+    return;
+  }
+  try{
+    const constraints = kind==='camera' ? {video:true} : {audio:true};
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    stream.getTracks().forEach(t=>t.stop());
+    state.permissions[kind] = true;
+    toast((kind==='camera'?'📷 Camera':'🎤 Microphone') + ' allow हो गया');
+  } catch(e){
+    state.permissions[kind] = false;
+    toast('❌ ' + (kind==='camera'?'Camera':'Microphone') + ' access नहीं मिला', true);
+  }
+  updatePermissionUI();
+  savePermissionsToAccount();
+}
+
+function updatePermissionUI(){
+  const label = v => v===true ? '✅ Allowed' : (v===false ? '❌ Denied' : 'Allow');
+  const ids = { camera:['permCameraBtn','settPermCameraBtn'], microphone:['permMicBtn','settPermMicBtn'], gallery:['permGalleryBtn','settPermGalleryBtn'] };
+  Object.keys(ids).forEach(k=>{
+    ids[k].forEach(id=>{
+      const btn = document.getElementById(id);
+      if(btn) btn.textContent = label(state.permissions[k]);
+    });
+  });
+}
+
+function savePermissionsToAccount(){
+  if(!auth.currentUser) return;
+  db.collection('accounts').doc(auth.currentUser.uid).set({ permissions: state.permissions, permissionsAsked:true }, {merge:true}).catch(()=>{});
+}
+
+/* ---------------- REEL CREATOR ---------------- */
+let reelDraft = { source:null };
+function openReelCreator(){
+  reelDraft = { source:null };
+  document.getElementById('reelCaptionInput').value = '';
+  document.getElementById('reelSourceStatus').textContent = '';
+  document.getElementById('reelCreatorOverlay').classList.add('active');
+}
+function closeReelCreator(){
+  document.getElementById('reelCreatorOverlay').classList.remove('active');
+}
+function pickReelSource(src){
+  reelDraft.source = src;
+  document.getElementById('reelSourceStatus').textContent = (src==='camera' ? '📷 Camera' : '🖼️ Gallery') + ' select किया गया';
+  if(src==='camera' && state.permissions.camera!==true) requestPermission('camera');
+  if(src==='gallery' && state.permissions.gallery!==true) requestPermission('gallery');
+}
+function submitReel(){
+  const cap = document.getElementById('reelCaptionInput').value.trim();
+  if(!cap){ toast('⚠️ Caption डालें', true); return; }
+  state.myReels.unshift({ cap, likes:'0', comments:'0' });
+  toast('✅ Reel post हो गई');
+  closeReelCreator();
+  renderMyContent();
+}
+
+/* ---------------- CHANGE EMAIL (7-day cooldown) ---------------- */
+function emailChangeDaysRemaining(){
+  if(!state.lastEmailChangeAt) return 0;
+  const lastMs = state.lastEmailChangeAt.toMillis ? state.lastEmailChangeAt.toMillis() : new Date(state.lastEmailChangeAt).getTime();
+  const daysPassed = (Date.now() - lastMs) / 86400000;
+  return daysPassed >= 7 ? 0 : Math.ceil(7 - daysPassed);
+}
+function openChangeEmail(){
+  const err = document.getElementById('emailChangeErr'); err.textContent='';
+  document.getElementById('newEmailInput').value = '';
+  const remaining = emailChangeDaysRemaining();
+  if(remaining > 0){
+    document.getElementById('emailChangeSub').textContent = `Email दोबारा ${remaining} दिन बाद change कर सकते हैं`;
+    document.getElementById('newEmailInput').disabled = true;
+  } else {
+    document.getElementById('emailChangeSub').textContent = 'नया email address डालें';
+    document.getElementById('newEmailInput').disabled = false;
+  }
+  document.getElementById('emailChangeOverlay').classList.add('active');
+}
+function closeChangeEmail(){
+  document.getElementById('emailChangeOverlay').classList.remove('active');
+}
+function submitEmailChange(){
+  const err = document.getElementById('emailChangeErr'); err.textContent = '';
+  const remaining = emailChangeDaysRemaining();
+  if(remaining > 0){ err.textContent = `⏳ अभी ${remaining} दिन बाकी हैं`; return; }
+  const newEmail = document.getElementById('newEmailInput').value.trim();
+  if(!isValidEmail(newEmail)){ err.textContent = '⚠️ सही Email डालें'; return; }
+  atoast('⏳ Email update हो रहा है...');
+  auth.currentUser.updateEmail(newEmail).then(()=>{
+    return db.collection('accounts').doc(auth.currentUser.uid).set({ email:newEmail, lastEmailChangeAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true});
+  }).then(()=>{
+    state.profile.email = newEmail;
+    state.lastEmailChangeAt = new Date();
+    document.getElementById('settEmailCurrent').textContent = newEmail;
+    toast('✅ Email बदल दिया गया');
+    closeChangeEmail();
+  }).catch(e=>{
+    err.textContent = e.code==='auth/requires-recent-login' ? '⚠️ सुरक्षा के लिए दोबारा login करके email बदलें' : ('❌ ' + e.message);
+  });
 }
 
 /* ---------------- NOTIFICATIONS ---------------- */
@@ -2203,6 +2401,8 @@ function renderSettings(){
   document.getElementById('settingsProfileName').textContent = state.profile.name;
   document.getElementById('lockMethodVal').textContent = state.lockMethod==='pin'?'PIN':(state.lockMethod==='pattern'?'Pattern':'Face ID');
   document.getElementById('lockMethodDesc').textContent = 'App खोलते समय यह method चलेगा';
+  document.getElementById('settEmailCurrent').textContent = state.profile.email || 'Set nahi kiya gaya';
+  updatePermissionUI();
   const lockedOnes = [...state.chats, ...state.groups].filter(x=>x.locked);
   const summary = document.getElementById('lockedChatsSummary');
   if(lockedOnes.length===0){
