@@ -267,6 +267,27 @@
   .reel-info .rcap{ font-size:12.5px; color:#C7D0DA; margin-top:6px; }
   .reel-info .rtag{ display:inline-block; background:rgba(61,220,151,0.12); color:var(--mint); font-size:10px; padding:3px 9px; border-radius:8px; margin-bottom:8px; font-weight:700; letter-spacing:0.4px; }
   .ravatar{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#06110B; }
+  .reel-side .ricon{ cursor:pointer; user-select:none; }
+  .reel-side .ricon.liked{ color:var(--danger); }
+  .reel-follow-row{ display:flex; gap:8px; margin-top:12px; }
+  .follow-chip{
+    border:1px solid var(--border); background:rgba(11,15,20,0.55); color:var(--text);
+    font-size:11px; font-weight:700; padding:7px 12px; border-radius:20px; cursor:pointer;
+    display:flex; align-items:center; gap:5px; backdrop-filter:blur(6px);
+  }
+  .follow-chip.kavach.on{ background:var(--mint); color:#06110B; border-color:var(--mint); }
+  .follow-chip.yt{ border-color:#5C1418; color:#FF6B6B; }
+  .comments-sheet{ display:flex; flex-direction:column; max-height:78vh; }
+  .comments-list{ overflow-y:auto; flex:1; margin:10px 0; -ms-overflow-style:none; scrollbar-width:none; }
+  .comments-list::-webkit-scrollbar{ display:none; }
+  .comment-item{ display:flex; gap:10px; padding:9px 2px; border-bottom:1px solid var(--border); text-align:left; }
+  .comment-item .avatar{ width:32px; height:32px; font-size:12px; flex:0 0 auto; }
+  .comment-item .c-body{ flex:1; min-width:0; }
+  .comment-item .c-name{ font-size:12.5px; font-weight:700; }
+  .comment-item .c-text{ font-size:12.5px; color:#C7D0DA; margin-top:2px; word-break:break-word; }
+  .comment-input-row{ display:flex; gap:8px; }
+  .comment-input-row input{ flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:20px; padding:10px 14px; font-size:13px; }
+  .comment-input-row button{ background:var(--mint); color:#06110B; border:none; border-radius:20px; padding:0 16px; font-weight:700; cursor:pointer; }
 
   /* ---------- STORY CREATOR ---------- */
   .story-preview{ height:280px; border-radius:18px; background:linear-gradient(160deg,#1A222D,#0B0F14); display:flex; align-items:center; justify-content:center; font-size:56px; margin-top:8px; border:1px solid var(--border); transition:filter .2s; }
@@ -717,6 +738,19 @@
     <div class="video-overlay" id="videoOverlay">
       <button class="video-close" onclick="closeVideoPlayer()">✕</button>
       <div class="video-player-wrap" id="videoPlayerWrap"></div>
+    </div>
+  </div>
+
+  <!-- REEL COMMENTS OVERLAY -->
+  <div class="modal-overlay" id="reelCommentsOverlay">
+    <div class="modal-sheet comments-sheet" style="text-align:left; position:relative;">
+      <button class="modal-close" onclick="closeReelComments()">✕</button>
+      <div class="modal-title">💬 Comments</div>
+      <div class="comments-list" id="reelCommentsList"></div>
+      <div class="comment-input-row">
+        <input type="text" id="reelCommentInput" placeholder="Comment लिखें..." onkeydown="if(event.key==='Enter')submitReelComment()">
+        <button onclick="submitReelComment()">भेजें</button>
+      </div>
     </div>
   </div>
 
@@ -1455,52 +1489,18 @@ const state = {
   currentScreen: 'home',
   activeChatId: null,
   modalCtx: null, // {type:'unlock-app'} | {type:'set-chat-pin',id} | {type:'unlock-chat',id} | {type:'change-app-pin', step}
-  chats: [
-    {id:'c1', uid:'u_ananya', name:'Ananya', color:'#3DDC97', last:'Kal milte hai na?', time:'9:42', locked:false, pin:null, attempts:0, unlockedThisSession:false,
-      messages:[{from:'in',text:'Hii, kaisi ho?'},{from:'out',text:'Badiya! tum batao'},{from:'in',text:'Kal milte hai na?'}]},
-    {id:'c2', uid:'u_rohit', name:'Rohit Office', color:'#F2B84B', last:'Report bhej di maine', time:'8:15', locked:false, pin:null, attempts:0, unlockedThisSession:false,
-      messages:[{from:'in',text:'Report bhej di maine'},{from:'out',text:'Thanks, dekh leta hu'}]},
-    {id:'c3', uid:'u_mom', name:'Mom ❤️', color:'#E5484D', last:'Khana kha liya?', time:'Yesterday', locked:false, pin:null, attempts:0, unlockedThisSession:false,
-      messages:[{from:'in',text:'Khana kha liya?'},{from:'out',text:'Haan mumma'}]},
-    {id:'c4', uid:'u_priya', name:'Priya', color:'#7C8A9A', last:'Voice note', time:'Yesterday', locked:false, pin:null, attempts:0, unlockedThisSession:false,
-      messages:[{from:'in',text:'Sun message'},{from:'out',text:'Ok sunta hu'}]},
-  ],
-  groups: [
-    {id:'g1', name:'College Squad 🎓', members:'Ananya, Rohit +6', last:'Rohit: kal exam hai kya', time:'10:02', locked:false, pin:null, attempts:0},
-    {id:'g2', name:'Ghar Wale 🏡', members:'Papa, Mom, Bhai', last:'Papa: pahucho jaldi', time:'7:50', locked:false, pin:null, attempts:0},
-  ],
+  chats: [],
+  groups: [],
   stories: [
     {name:'आपकी Story', mine:true},
-    {name:'Ananya', seen:false, uid:'u_ananya'},
-    {name:'Rohit', seen:false, uid:'u_rohit'},
-    {name:'Priya', seen:true, uid:'u_priya'},
-    {name:'Kabir', seen:true, uid:'u_kabir'},
   ],
-  reels: [
-    {user:'Ananya', uid:'u_ananya', color:'#3DDC97', cap:'Sunset vibes yaar 🌅✨', likes:'2.4K', comments:'88'},
-    {user:'Kabir', uid:'u_kabir', color:'#F2B84B', cap:'Gym day 💪 #consistency', likes:'980', comments:'34'},
-    {user:'Priya', uid:'u_priya', color:'#7C8A9A', cap:'Monsoon walk ☔🎶', likes:'5.1K', comments:'210'},
-    {user:'Rohit Office', uid:'u_rohit', color:'#E5484D', cap:'Weekend trip recap 🚗', likes:'1.2K', comments:'56'},
-  ],
-  otherUsers: [
-    {id:'u_ananya', name:'Ananya', color:'#3DDC97', bio:'Coffee & code ☕💻 | Sunset chaser', birthday:'1999-04-22', following:true, followers:842},
-    {id:'u_rohit', name:'Rohit Office', color:'#F2B84B', bio:'Product Team @ Office | Cricket fan 🏏', birthday:'1996-11-03', following:true, followers:310},
-    {id:'u_mom', name:'Mom ❤️', color:'#E5484D', bio:'Ghar ki shaan 🏡 | Best cook in town', birthday:'1970-06-10', following:true, followers:56},
-    {id:'u_priya', name:'Priya', color:'#7C8A9A', bio:'Dance • Travel • Chai lover ☕', birthday:'2001-09-18', following:false, followers:1200},
-    {id:'u_kabir', name:'Kabir', color:'#F2B84B', bio:'Gym | Motivation | Consistency 💪', birthday:'1998-02-05', following:false, followers:670},
-  ],
+  reels: [],
+  otherUsers: [],
   otherProfileBackTo:'home',
   activeOtherProfileId:null,
-  notifications: [
-    {id:'n1', type:'story_like', text:'Ananya ने आपकी Story like की ❤️', time:'2h', read:false, color:'#3DDC97', initial:'AN'},
-    {id:'n2', type:'follow', text:'Kabir ने आपको Follow किया', time:'5h', read:false, color:'#F2B84B', initial:'K'},
-    {id:'n3', type:'follow_accept', text:'Rohit Office ने आपकी Follow request accept कर ली ✅', time:'1d', read:true, color:'#F2B84B', initial:'RO'},
-  ],
+  notifications: [],
   myStories: [],
-  myReels: [
-    {cap:'Sunset vibes yaar 🌅✨', likes:'128', comments:'12'},
-    {cap:'Weekend trip recap 🚗', likes:'340', comments:'28'},
-  ],
+  myReels: [],
   permissions: {camera:null, microphone:null, gallery:null},
   needsPermissionsPrompt: false,
   lastEmailChangeAt: null,
@@ -1520,7 +1520,14 @@ const state = {
    Google Cloud Console → APIs & Services → Credentials → Create API Key
    (और "YouTube Data API v3" enable करें उसी project में) */
 const YOUTUBE_API_KEY = 'AIzaSyCyn5G9eVUw1rMVginEGFfQxtWqVhkTPG4';
-let reelsState = { mode:'shorts', query:'shorts trending', items:[], loading:false };
+let reelsState = { mode:'shorts', query:'shorts trending', items:[], loading:false, interactions:{} };
+
+function getReelInteraction(id, baseLikes, baseComments){
+  if(!reelsState.interactions[id]){
+    reelsState.interactions[id] = { liked:false, likeCount:baseLikes||0, comments:[], kavachFollowing:false };
+  }
+  return reelsState.interactions[id];
+}
 
 /* ---------------- STORY CREATOR (filters + song + hide-from) ---------------- */
 const STORY_FILTERS = [
@@ -1716,19 +1723,18 @@ function renderHome(){
     </div>`).join('');
 
   const feed = document.getElementById('feedList');
-  const reels = [
-    {user:'Ananya', cap:'Sunset vibes 🌅', tag:'REEL'},
-    {user:'Rohit Office', cap:'Team lunch 🍕', tag:'PHOTO'},
-    {user:'Priya', cap:'Monsoon walk ☔', tag:'REEL'},
-  ];
-  feed.innerHTML = reels.map(r=>`
-    <div class="reel-card">
-      <div class="reel-media"><span class="reel-tag">${r.tag}</span>▶</div>
-      <div class="reel-meta">
-        <div class="reel-user">${r.user}</div>
-        <div class="reel-cap">${r.cap}</div>
-      </div>
-    </div>`).join('');
+  if(!state.myReels.length){
+    feed.innerHTML = '<div class="empty-hint">अभी कोई post नहीं — ऊपर 🎬 Reels tab से real videos देखें या अपनी खुद की reel post करें</div>';
+  } else {
+    feed.innerHTML = state.myReels.map(r=>`
+      <div class="reel-card">
+        <div class="reel-media"><span class="reel-tag">REEL</span>▶</div>
+        <div class="reel-meta">
+          <div class="reel-user">${state.profile.name}</div>
+          <div class="reel-cap">${r.cap}</div>
+        </div>
+      </div>`).join('');
+  }
 }
 
 /* ---------------- OTHER USER PROFILE (Follow/Unfollow) ---------------- */
@@ -2039,12 +2045,41 @@ async function fetchYouTube(query, mode){
   const res = await fetch(url);
   const data = await res.json();
   if(data.error){ throw new Error(data.error.message || 'YouTube API error'); }
-  return (data.items || []).map(it=>({
+  const items = (data.items || []).map(it=>({
     id: it.id.videoId,
     title: it.snippet.title,
     channel: it.snippet.channelTitle,
-    thumb: (it.snippet.thumbnails.high || it.snippet.thumbnails.medium || it.snippet.thumbnails.default).url
+    channelId: it.snippet.channelId,
+    thumb: (it.snippet.thumbnails.high || it.snippet.thumbnails.medium || it.snippet.thumbnails.default).url,
+    likeCount:0, commentCount:0
   }));
+  if(items.length){
+    try{
+      const ids = items.map(v=>v.id).join(',');
+      const statsUrl = 'https://www.googleapis.com/youtube/v3/videos?part=statistics&id=' + ids + '&key=' + YOUTUBE_API_KEY;
+      const sRes = await fetch(statsUrl);
+      const sData = await sRes.json();
+      (sData.items || []).forEach(s=>{
+        const v = items.find(x=>x.id===s.id);
+        if(v && s.statistics){
+          v.likeCount = parseInt(s.statistics.likeCount || '0', 10);
+          v.commentCount = parseInt(s.statistics.commentCount || '0', 10);
+        }
+      });
+    }catch(e){ /* stats fetch fail is non-fatal, counts stay 0 */ }
+  }
+  return items;
+}
+
+async function fetchYoutubeComments(videoId){
+  const url = 'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=20&order=relevance&videoId=' + videoId + '&key=' + YOUTUBE_API_KEY;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message || 'Comments load नहीं हुए (शायद comments off हैं)');
+  return (data.items || []).map(it=>{
+    const c = it.snippet.topLevelComment.snippet;
+    return { author: c.authorDisplayName, text: c.textDisplay, mine:false };
+  });
 }
 
 async function renderReels(){
@@ -2060,35 +2095,148 @@ async function renderReels(){
       return;
     }
     if(reelsState.mode === 'shorts'){
-      el.innerHTML = items.map(v=>`
+      el.innerHTML = items.map(v=>{
+        const ix = getReelInteraction(v.id, v.likeCount, v.commentCount);
+        return `
         <div class="reel-slide">
           <div class="video-thumb-play" style="background-image:url('${v.thumb}'); background-size:cover; background-position:center; position:absolute; inset:0;"></div>
           <div class="playicon" onclick="openVideoPlayer('${v.id}', true)">▶</div>
           <div class="reel-side">
-            <div class="ricon">▶<span>Play</span></div>
-            <div class="ricon">↗️<span>Share</span></div>
+            <div class="ricon" onclick="openVideoPlayer('${v.id}', true)">▶<span>Play</span></div>
+            <div class="ricon ${ix.liked?'liked':''}" onclick="toggleReelLike('${v.id}')">${ix.liked?'❤️':'🤍'}<span>${fmtCount(ix.likeCount)}</span></div>
+            <div class="ricon" onclick="openReelComments('${v.id}')">💬<span>${fmtCount(v.commentCount + ix.comments.length)}</span></div>
+            <div class="ricon" onclick="shareReel('${v.id}')">↗️<span>Share</span></div>
           </div>
           <div class="reel-info">
             <div class="rtag">YouTube Shorts</div>
             <div class="ruser"><div class="ravatar" style="background:#3DDC97">${initials(v.channel||'YT')}</div>${v.channel}</div>
             <div class="rcap">${v.title}</div>
+            <div class="reel-follow-row">
+              <button class="follow-chip kavach ${ix.kavachFollowing?'on':''}" onclick="toggleKavachFollow('${v.id}')">${ix.kavachFollowing?'✅ Kavach पर Following':'➕ Kavach Follow'}</button>
+              <button class="follow-chip yt" onclick="subscribeOnYoutube('${v.channelId}')">🔴 YouTube Subscribe</button>
+            </div>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } else {
-      el.innerHTML = items.map(v=>`
-        <div class="video-card" onclick="openVideoPlayer('${v.id}', false)">
-          <img src="${v.thumb}" alt="">
+      el.innerHTML = items.map(v=>{
+        const ix = getReelInteraction(v.id, v.likeCount, v.commentCount);
+        return `
+        <div class="video-card">
+          <img src="${v.thumb}" alt="" onclick="openVideoPlayer('${v.id}', false)">
           <div class="vc-meta">
             <div class="vc-title">${v.title}</div>
             <div class="vc-channel">${v.channel}</div>
+            <div class="reel-follow-row" style="margin-top:10px;">
+              <button class="follow-chip kavach ${ix.liked?'on':''}" onclick="event.stopPropagation(); toggleReelLike('${v.id}')">${ix.liked?'❤️':'🤍'} ${fmtCount(ix.likeCount)}</button>
+              <button class="follow-chip" onclick="event.stopPropagation(); openReelComments('${v.id}')">💬 ${fmtCount(v.commentCount + ix.comments.length)}</button>
+              <button class="follow-chip kavach ${ix.kavachFollowing?'on':''}" onclick="event.stopPropagation(); toggleKavachFollow('${v.id}')">${ix.kavachFollowing?'✅ Following':'➕ Kavach Follow'}</button>
+              <button class="follow-chip yt" onclick="event.stopPropagation(); subscribeOnYoutube('${v.channelId}')">🔴 Subscribe</button>
+            </div>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
   }catch(e){
     el.innerHTML = '<div class="reels-empty">❌ '+ e.message +'</div>';
   }finally{
     reelsState.loading = false;
   }
+}
+
+function fmtCount(n){
+  n = n || 0;
+  if(n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'M';
+  if(n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
+  return String(n);
+}
+
+function findReelItem(videoId){
+  return (reelsState.items || []).find(v=>v.id===videoId);
+}
+
+function toggleReelLike(videoId){
+  const ix = getReelInteraction(videoId);
+  ix.liked = !ix.liked;
+  ix.likeCount += ix.liked ? 1 : -1;
+  toast(ix.liked ? '❤️ Liked' : 'Like हटा दिया');
+  renderReels();
+}
+
+function toggleKavachFollow(videoId){
+  const ix = getReelInteraction(videoId);
+  const v = findReelItem(videoId);
+  ix.kavachFollowing = !ix.kavachFollowing;
+  toast(ix.kavachFollowing ? `✅ ${v?v.channel:'Creator'} को Kavach पर Follow किया` : 'Unfollowed');
+  renderReels();
+}
+
+function subscribeOnYoutube(channelId){
+  if(!channelId){ toast('❌ Channel नहीं मिला', true); return; }
+  window.open('https://www.youtube.com/channel/' + channelId + '?sub_confirmation=1', '_blank');
+}
+
+function shareReel(videoId){
+  const url = 'https://youtube.com/shorts/' + videoId;
+  if(navigator.share){
+    navigator.share({ title:'Kavach Reel', url }).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(()=>toast('🔗 Link copy हो गया')).catch(()=>toast(url));
+  } else {
+    toast(url);
+  }
+}
+
+let activeCommentsVideoId = null;
+function openReelComments(videoId){
+  activeCommentsVideoId = videoId;
+  document.getElementById('reelCommentsOverlay').classList.add('active');
+  document.getElementById('reelCommentInput').value = '';
+  renderReelComments(true);
+}
+
+function closeReelComments(){
+  document.getElementById('reelCommentsOverlay').classList.remove('active');
+  activeCommentsVideoId = null;
+  renderReels();
+}
+
+async function renderReelComments(fetchFromYoutube){
+  const listEl = document.getElementById('reelCommentsList');
+  const ix = getReelInteraction(activeCommentsVideoId);
+  const localHtml = ix.comments.map(c=>`
+    <div class="comment-item">
+      <div class="avatar" style="background:${state.profile.color}">${initials(c.author)}</div>
+      <div class="c-body"><div class="c-name">${c.author}</div><div class="c-text">${c.text}</div></div>
+    </div>`).join('');
+
+  if(fetchFromYoutube){
+    listEl.innerHTML = '<div class="reels-loading">💬 Comments load हो रहे हैं...</div>' + localHtml;
+    try{
+      const ytComments = await fetchYoutubeComments(activeCommentsVideoId);
+      ix.ytComments = ytComments;
+    }catch(e){
+      ix.ytComments = [];
+    }
+  }
+  const ytHtml = (ix.ytComments || []).map(c=>`
+    <div class="comment-item">
+      <div class="avatar" style="background:#7C8A9A">${initials(c.author)}</div>
+      <div class="c-body"><div class="c-name">${c.author}</div><div class="c-text">${c.text}</div></div>
+    </div>`).join('');
+
+  const all = localHtml + ytHtml;
+  listEl.innerHTML = all || '<div class="empty-hint">अभी कोई comment नहीं — पहला comment करें</div>';
+}
+
+function submitReelComment(){
+  const input = document.getElementById('reelCommentInput');
+  const txt = input.value.trim();
+  if(!txt || !activeCommentsVideoId) return;
+  const ix = getReelInteraction(activeCommentsVideoId);
+  ix.comments.push({ author: state.profile.name, text: txt });
+  input.value = '';
+  renderReelComments(false);
 }
 
 function openVideoPlayer(videoId, loop){
@@ -2303,6 +2451,7 @@ function renderChats(){
 
 function renderGroups(){
   const el = document.getElementById('groupsList');
+  if(state.groups.length===0){ el.innerHTML = '<div class="empty-hint">अभी कोई group नहीं</div>'; return; }
   el.innerHTML = state.groups.map(g=>`
     <div class="list-row">
       <div class="group-avatars">
