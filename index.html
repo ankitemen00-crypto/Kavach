@@ -375,9 +375,9 @@
   #authGate .topbar { padding:18px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
   #authGate .topbar h1 { font-family:'Space Grotesk'; font-size:17px; }
   #authGate .logout { background:none; border:1px solid var(--border); color:var(--muted); font-size:11px; padding:6px 10px; border-radius:10px; cursor:pointer; }
-  #authGate .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); }
-  #authGate .stat { background:var(--surface); padding:16px; text-align:center; }
-  #authGate .stat .num { font-family:'Space Grotesk'; font-weight:700; font-size:20px; color:var(--mint); }
+  #authGate .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); }
+  #authGate .stat { background:var(--surface); padding:12px 6px; text-align:center; }
+  #authGate .stat .num { font-family:'Space Grotesk'; font-weight:700; font-size:18px; color:var(--mint); }
   #authGate .stat .lbl { font-size:10.5px; color:var(--muted); margin-top:2px; }
   #authGate .content { padding:14px 16px 20px; max-height:60vh; overflow-y:auto; }
   #authGate .urow { display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
@@ -388,6 +388,8 @@
   #authGate .tag { font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:6px; }
   #authGate .tag.active { color:var(--mint); background:rgba(61,220,151,.1); border:1px solid var(--mint-dim); }
   #authGate .tag.suspended { color:var(--danger); background:rgba(229,72,77,.1); border:1px solid var(--danger-dim); }
+  #authGate .tag.blocked { color:var(--amber); background:rgba(242,184,75,.12); border:1px solid #5C4A22; }
+  #authGate .tag.tempsuspend { color:var(--amber); background:rgba(242,184,75,.12); border:1px solid #5C4A22; }
   #authGate .actions { display:flex; gap:6px; flex:0 0 auto; }
   #authGate .abtn { background:var(--surface-2); border:1px solid var(--border); color:var(--muted); font-size:14px; width:32px; height:32px; border-radius:10px; cursor:pointer; }
   #authGate .abtn.danger { color:var(--danger); }
@@ -551,6 +553,7 @@
         <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total Users</div></div>
         <div class="stat"><div class="num" id="statActive">0</div><div class="lbl">Active</div></div>
         <div class="stat"><div class="num" id="statSuspended">0</div><div class="lbl">Suspended</div></div>
+        <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Blocked</div></div>
       </div>
       <div class="content" id="userList"></div>
     </div>
@@ -1093,11 +1096,33 @@ function attemptLogin(){
     if(!snap.exists){ err.textContent='⚠️ Account का data नहीं मिला (Firestore)'; auth.signOut(); return; }
     const data = snap.data();
     if(data.phone && data.phone !== phone){ err.textContent='⚠️ Phone number match नहीं हुआ'; auth.signOut(); return; }
+    if(data.role !== 'admin'){
+      const statusCheck = await checkAccountStatus(cred.user.uid, data);
+      if(!statusCheck.ok){ err.textContent = statusCheck.message; auth.signOut(); return; }
+      data.status = statusCheck.data.status;
+    }
     if(data.role === 'admin'){ enterDashboard(); }
     else { enterUserApp(data); }
   }).catch(err2=>{
     err.textContent = '❌ ' + (err2.message || 'Login fail हुआ');
   });
+}
+
+/* checks block/suspend status; auto-reactivates an expired temporary suspension */
+async function checkAccountStatus(uid, data){
+  if(data.status === 'blocked'){
+    return { ok:false, message:'⛔ यह account block कर दिया गया है — admin से contact करें', data };
+  }
+  if(data.status === 'suspended'){
+    if(data.suspendUntil && data.suspendUntil <= Date.now()){
+      await db.collection('accounts').doc(uid).set({ status:'active', suspendUntil:null }, { merge:true });
+      data.status = 'active'; data.suspendUntil = null;
+      return { ok:true, data };
+    }
+    const remain = data.suspendUntil ? fmtSuspendRemaining(data.suspendUntil) : 'अनिश्चित समय';
+    return { ok:false, message:`⏳ यह account suspend है (${remain}) — admin से contact करें`, data };
+  }
+  return { ok:true, data };
 }
 
 function explainAuthError(err){
@@ -1120,12 +1145,23 @@ async function finishGoogleSignIn(user, mode){
   const snap = await ref.get();
   let data;
   if(!snap.exists){
+    if(mode==='signup' && signupRole!=='admin'){
+      const deviceCheck = checkDeviceSignupAllowed(user.email||'');
+      if(!deviceCheck.ok){ auth.signOut(); atoast('❌ ' + deviceCheck.message, true); return; }
+    }
     const role = (mode==='signup' && signupRole==='admin') ? 'admin' : 'user';
     data = { name:user.displayName||'Google User', email:user.email||'', phone:'', role, provider:'google',
-      permissionsAsked:false, permissions:{camera:null, microphone:null, gallery:null}, lastEmailChangeAt:null };
+      permissionsAsked:false, permissions:{camera:null, microphone:null, gallery:null}, lastEmailChangeAt:null,
+      status:'active', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
     await ref.set(data);
+    if(role!=='admin') markDeviceSignedUp(user.email||'');
   } else {
     data = snap.data();
+  }
+  if(data.role !== 'admin'){
+    const statusCheck = await checkAccountStatus(user.uid, data);
+    if(!statusCheck.ok){ auth.signOut(); atoast('❌ ' + statusCheck.message, true); return; }
+    data.status = statusCheck.data.status;
   }
   atoast(mode==='signup' ? '✅ Google से account बन गया' : '✅ Google से login हो गया');
   if(data.role === 'admin'){ enterDashboard(); } else { enterUserApp(data); }
@@ -1209,6 +1245,18 @@ function logoutToAuth(){
   navigate('lock');
 }
 
+const DEVICE_SIGNUP_KEY = 'kavach_device_email';
+function checkDeviceSignupAllowed(email){
+  const existing = localStorage.getItem(DEVICE_SIGNUP_KEY);
+  if(existing && existing.toLowerCase() !== email.toLowerCase()){
+    return { ok:false, message:`इस device पर पहले से "${existing}" से account बन चुका है — सिर्फ़ एक account allowed है। उसी email से Login करें।` };
+  }
+  return { ok:true };
+}
+function markDeviceSignedUp(email){
+  if(email) localStorage.setItem(DEVICE_SIGNUP_KEY, email);
+}
+
 /* ---------------- SIGNUP: step 1 — create real Firebase account ---------------- */
 function startSignupVerification(){
   const name = document.getElementById('suName').value.trim();
@@ -1226,6 +1274,11 @@ function startSignupVerification(){
   if(pin.length<4){ err.textContent='⚠️ कम से कम 4 characters का password बनाएं'; return; }
   if(!/^\d{4}$/.test(lockPin)){ err.textContent='⚠️ App Lock PIN 4 digits का होना चाहिए'; return; }
   if(lockPin !== lockPinConfirm){ err.textContent='⚠️ App Lock PIN दोनों बार same नहीं है'; return; }
+
+  if(signupRole !== 'admin'){
+    const deviceCheck = checkDeviceSignupAllowed(email);
+    if(!deviceCheck.ok){ err.textContent = '⚠️ ' + deviceCheck.message; return; }
+  }
 
   otpState.pendingSignup = { name, email, phone, pin, appLockPin: lockPin, role: signupRole };
   atoast('⏳ Account बनाया जा रहा है...');
@@ -1332,6 +1385,7 @@ function finalizeSignup(){
     permissionsAsked: false, permissions: {camera:null, microphone:null, gallery:null}, lastEmailChangeAt: null,
     status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(()=>{
+    if(p.role !== 'admin') markDeviceSignedUp(p.email);
     auth.signOut();
     atoast('✅ Account बन गया — अब login करें');
     backToChooser();
@@ -1422,8 +1476,16 @@ async function loadUsersFromFirestore(){
     users = snap.docs.map(d=>{
       const v = d.data();
       return { id:d.id, name:v.name||'User', color:colorFor(d.id), role:'Member',
-        status:v.status||'active', chatsLocked:0, pin:v.pin||'----', pinVisible:false,
+        status:v.status||'active', suspendUntil:v.suspendUntil||null, chatsLocked:0, pin:v.pin||'----', pinVisible:false,
         email:v.email||'', phone:v.phone||'' };
+    });
+    // auto-reactivate anyone whose temporary suspension has passed
+    const now = Date.now();
+    users.forEach(u=>{
+      if(u.status==='suspended' && u.suspendUntil && u.suspendUntil <= now){
+        u.status = 'active'; u.suspendUntil = null;
+        db.collection('accounts').doc(u.id).set({ status:'active', suspendUntil:null }, { merge:true }).catch(()=>{});
+      }
     });
   }catch(e){
     atoast('❌ Users load नहीं हुए: ' + e.message, true);
@@ -1455,22 +1517,92 @@ function renderUsers(){
     </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">कोई registered user नहीं है</div>';
 }
 
+function statusLabel(u){
+  if(u.status==='blocked') return 'BLOCKED';
+  if(u.status==='suspended') return u.suspendUntil ? 'TEMP SUSPENDED' : 'SUSPENDED';
+  return 'ACTIVE';
+}
+function statusTagClass(u){
+  if(u.status==='blocked') return 'blocked';
+  if(u.status==='suspended') return u.suspendUntil ? 'tempsuspend' : 'suspended';
+  return 'active';
+}
+
+function renderUsers(){
+  document.getElementById('statTotal').textContent = users.length;
+  document.getElementById('statActive').textContent = users.filter(u=>u.status==='active').length;
+  document.getElementById('statSuspended').textContent = users.filter(u=>u.status==='suspended').length;
+  document.getElementById('statBlocked').textContent = users.filter(u=>u.status==='blocked').length;
+
+  document.getElementById('userList').innerHTML = users.length ? users.map(u=>`
+    <div class="urow">
+      <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+      <div class="umain">
+        <div class="uname">${u.name} <span class="tag ${statusTagClass(u)}">${statusLabel(u)}</span></div>
+        <div class="usub">${u.email || u.phone || ''}${u.status==='suspended' && u.suspendUntil ? ' · ' + fmtSuspendRemaining(u.suspendUntil) : ''}</div>
+        <div class="pwdrow">
+          <span class="pwdval">${u.pinVisible ? u.pin : '••••'}</span>
+          <button class="pwdtoggle" onclick="togglePwd('${u.id}')">${u.pinVisible?'Hide':'Show'}</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="abtn ${u.status==='blocked'?'mint':''}" title="${u.status==='blocked'?'Unblock':'Block'}" onclick="toggleBlock('${u.id}')">🚫</button>
+        <button class="abtn ${u.status==='suspended'?'mint':''}" title="${u.status==='suspended'?'Reactivate':'Suspend'}" onclick="toggleSuspend('${u.id}')">⛔</button>
+        <button class="abtn" title="कुछ समय के लिए suspend करें" onclick="tempSuspendUser('${u.id}')">⏳</button>
+        <button class="abtn danger" title="Delete user" onclick="removeUser('${u.id}')">🗑️</button>
+      </div>
+    </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">कोई registered user नहीं है</div>';
+}
+
+function fmtSuspendRemaining(until){
+  const ms = until - Date.now();
+  if(ms <= 0) return 'expire हो चुका';
+  const days = Math.ceil(ms / 86400000);
+  return days + ' din baaki';
+}
+
 function togglePwd(id){
   const u = users.find(x=>x.id===id);
   u.pinVisible = !u.pinVisible;
   renderUsers();
 }
 
-function toggleSuspend(id){
+function toggleBlock(id){
   const u = users.find(x=>x.id===id);
-  u.status = u.status==='active' ? 'suspended' : 'active';
-  db.collection('accounts').doc(id).set({ status:u.status }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
-  atoast(u.status==='active' ? `✅ ${u.name} reactivate कर दिया गया` : `⛔ ${u.name} suspend कर दिया गया`);
+  const wasBlocked = u.status==='blocked';
+  u.status = wasBlocked ? 'active' : 'blocked';
+  u.suspendUntil = null;
+  db.collection('accounts').doc(id).set({ status:u.status, suspendUntil:null }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(wasBlocked ? `✅ ${u.name} unblock कर दिया गया` : `🚫 ${u.name} block कर दिया गया`);
   renderUsers();
 }
+
+function toggleSuspend(id){
+  const u = users.find(x=>x.id===id);
+  const wasSuspended = u.status==='suspended';
+  u.status = wasSuspended ? 'active' : 'suspended';
+  u.suspendUntil = null;
+  db.collection('accounts').doc(id).set({ status:u.status, suspendUntil:null }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(!wasSuspended ? `⛔ ${u.name} suspend कर दिया गया` : `✅ ${u.name} reactivate कर दिया गया`);
+  renderUsers();
+}
+
+function tempSuspendUser(id){
+  const u = users.find(x=>x.id===id);
+  const daysStr = prompt(`${u.name} को कितने दिनों के लिए suspend करें?`, '7');
+  if(daysStr===null) return;
+  const days = parseInt(daysStr, 10);
+  if(!days || days<=0){ atoast('⚠️ सही दिनों की संख्या डालें', true); return; }
+  const until = Date.now() + days*86400000;
+  u.status = 'suspended'; u.suspendUntil = until;
+  db.collection('accounts').doc(id).set({ status:'suspended', suspendUntil:until }, { merge:true }).catch(e=>atoast('❌ '+e.message, true));
+  atoast(`⏳ ${u.name} ${days} din ke liye suspend कर दिया गया`);
+  renderUsers();
+}
+
 function removeUser(id){
   const u = users.find(x=>x.id===id);
-  if(!confirm(`${u.name} को permanently delete करें?`)) return;
+  if(!confirm(`${u.name} को permanently delete करें? (Firestore account data delete होगा और login block हो जाएगा)`)) return;
   db.collection('accounts').doc(id).delete().catch(e=>atoast('❌ '+e.message, true));
   users = users.filter(x=>x.id!==id);
   atoast(`🗑️ ${u.name} delete कर दिया गया`);
@@ -2091,7 +2223,7 @@ async function renderReels(){
     const items = await fetchYouTube(reelsState.query, reelsState.mode);
     reelsState.items = items;
     if(!items.length){
-      el.innerHTML = '<div class="reels-empty">कोई video नहीं मिला — दूसरा search try करें</div>';
+      el.innerHTML = '<div class="reels-empty">कोई video नहीं मिला — दूसरा search try करें<br><button class="btn-primary" style="width:auto; margin-top:12px; padding:9px 18px;" onclick="renderReels()">🔄 फिर कोशिश करें</button></div>';
       return;
     }
     if(reelsState.mode === 'shorts'){
@@ -2138,7 +2270,7 @@ async function renderReels(){
       }).join('');
     }
   }catch(e){
-    el.innerHTML = '<div class="reels-empty">❌ '+ e.message +'</div>';
+    el.innerHTML = '<div class="reels-empty">❌ '+ e.message +'<br><span style="font-size:11px;">अगर यह बार-बार आ रहा है तो YouTube API key check करें — Google Cloud Console में "YouTube Data API v3" enable है या नहीं, key किसी domain restriction में block तो नहीं, और daily quota खत्म तो नहीं हुआ।</span><br><button class="btn-primary" style="width:auto; margin-top:12px; padding:9px 18px;" onclick="renderReels()">🔄 फिर कोशिश करें</button></div>';
   }finally{
     reelsState.loading = false;
   }
