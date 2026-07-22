@@ -2167,7 +2167,38 @@ function searchReels(){
   renderReels();
 }
 
+/* ---- Firestore-backed cache for YouTube search results ----
+   Quota bachane ke liye: same query+mode dobara aane par API call
+   nahi jaati, seedha Firestore se cached result mil jaata hai.
+   YT_CACHE_TTL_MS = kitni der tak cache "fresh" mana jaaye. */
+const YT_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ghante
+function ytCacheKey(query, mode){
+  return (mode||'x') + '__' + query.trim().toLowerCase().replace(/[^a-z0-9\u0900-\u097F]+/g,'_').slice(0,120);
+}
+async function getYoutubeCache(query, mode, allowStale){
+  try{
+    const key = ytCacheKey(query, mode);
+    const snap = await db.collection('yt_cache').doc(key).get();
+    if(!snap.exists) return null;
+    const data = snap.data();
+    if(!data.items || !data.fetchedAt) return null;
+    const age = Date.now() - data.fetchedAt;
+    if(!allowStale && age > YT_CACHE_TTL_MS) return null; // stale, refetch from API
+    return data.items;
+  }catch(e){ return null; } // cache read fail -> fall through to live API
+}
+async function setYoutubeCache(query, mode, items){
+  try{
+    const key = ytCacheKey(query, mode);
+    await db.collection('yt_cache').doc(key).set({ items, fetchedAt: Date.now(), query, mode });
+  }catch(e){ /* cache write fail is non-fatal */ }
+}
+
 async function fetchYouTube(query, mode){
+  // pehle fresh cache check karo — agar mil gaya to API call bilkul nahi jaayegi
+  const cached = await getYoutubeCache(query, mode, false);
+  if(cached) return cached;
+
   if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.indexOf('PASTE_YOUR') === 0){
     throw new Error('YouTube API key set नहीं है — script में YOUTUBE_API_KEY भरें');
   }
@@ -2176,7 +2207,12 @@ async function fetchYouTube(query, mode){
     + durationParam + '&q=' + encodeURIComponent(query) + '&key=' + YOUTUBE_API_KEY;
   const res = await fetch(url);
   const data = await res.json();
-  if(data.error){ throw new Error(data.error.message || 'YouTube API error'); }
+  if(data.error){
+    // quota khatam ho gayi ho to purana (stale) cache better-than-nothing dikha do
+    const stale = await getYoutubeCache(query, mode, true);
+    if(stale) return stale;
+    throw new Error(data.error.message || 'YouTube API error');
+  }
   const items = (data.items || []).map(it=>({
     id: it.id.videoId,
     title: it.snippet.title,
@@ -2200,18 +2236,31 @@ async function fetchYouTube(query, mode){
       });
     }catch(e){ /* stats fetch fail is non-fatal, counts stay 0 */ }
   }
+  setYoutubeCache(query, mode, items); // background save, response ka wait nahi karte
   return items;
 }
 
 async function fetchYoutubeComments(videoId){
+  // comments bhi cache karte hain (1 ghante ke liye) — same video ke comments baar-baar load hote hain
+  const cacheKey = 'comments_' + videoId;
+  try{
+    const snap = await db.collection('yt_cache').doc(cacheKey).get();
+    if(snap.exists){
+      const d = snap.data();
+      if(d.items && d.fetchedAt && (Date.now()-d.fetchedAt) < 60*60*1000) return d.items;
+    }
+  }catch(e){ /* cache read fail -> fall through */ }
+
   const url = 'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=20&order=relevance&videoId=' + videoId + '&key=' + YOUTUBE_API_KEY;
   const res = await fetch(url);
   const data = await res.json();
   if(data.error) throw new Error(data.error.message || 'Comments load नहीं हुए (शायद comments off हैं)');
-  return (data.items || []).map(it=>{
+  const comments = (data.items || []).map(it=>{
     const c = it.snippet.topLevelComment.snippet;
     return { author: c.authorDisplayName, text: c.textDisplay, mine:false };
   });
+  db.collection('yt_cache').doc(cacheKey).set({ items:comments, fetchedAt:Date.now() }).catch(()=>{});
+  return comments;
 }
 
 async function renderReels(){
