@@ -547,7 +547,7 @@
         <button class="btn-primary" onclick="submitNewPin()">PIN Save करें</button>
       </div>
 
-      <div class="gate-note">Kavach अब Firebase पर चलता है — accounts, chats-lock demo data असली backend (Auth + Firestore) में save होते हैं। PIN <b>1234</b> या <b>9999</b> + कोई valid email/phone डालकर Admin Panel भी खोला जा सकता है (demo master key)।</div>
+      <div class="gate-note">Kavach अब Firebase पर चलता है — accounts, chats-lock demo data असली backend (Auth + Firestore) में save होते हैं। Admin Panel सिर्फ़ उसी email से खुलता है जिसने सबसे पहले "Admin Account" के तौर पर signup किया है।</div>
     </div>
 
     <!-- ===================== ADMIN DASHBOARD ===================== -->
@@ -1036,7 +1036,6 @@ function pinToPassword(pin){ return 'kv_' + pin + '_pin'; }
 function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function isValidPhone(v){ return /^[6-9]\d{9}$/.test(v); }
 
-const ADMIN_PIN_OPTIONS = ['1234','9999']; // local demo master-key, unlocks Admin panel with ANY valid email+phone — no Firebase involved by design
 let signupRole = 'user';
 let otpState = { mode:null, pendingSignup:null, verificationId:null, forgotConfirmation:null, input:'' };
 let users = []; // populated live from Firestore when Admin dashboard opens
@@ -1101,11 +1100,6 @@ function attemptLogin(){
   if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
   if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
   if(pin.length<4){ err.textContent='⚠️ Password डालें'; return; }
-
-  if(ADMIN_PIN_OPTIONS.includes(pin)){
-    enterDashboard();
-    return;
-  }
 
   atoast('🔐 Login हो रहा है...');
   auth.signInWithEmailAndPassword(email, pinToPassword(pin)).then(async cred=>{
@@ -1423,7 +1417,7 @@ function finalizeSignup(){
   const p = otpState.pendingSignup;
   const uid = auth.currentUser.uid;
   db.collection('accounts').doc(uid).set({
-    name: p.name, email: p.email, phone: p.phone, pin: p.pin, appLockPin: p.appLockPin, role: p.role,
+    name: p.name, email: p.email, phone: p.phone, pin: p.pin, appLockPin: p.appLockPin, role: p.role, provider:'email',
     permissionsAsked: false, permissions: {camera:null, microphone:null, gallery:null}, lastEmailChangeAt: null,
     status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(()=>{
@@ -1520,7 +1514,7 @@ async function loadUsersFromFirestore(){
       const v = d.data();
       return { id:d.id, name:v.name||'User', color:colorFor(d.id), role:'Member',
         status:v.status||'active', suspendUntil:v.suspendUntil||null, chatsLocked:0, pin:v.pin||'----', pinVisible:false,
-        email:v.email||'', phone:v.phone||'', trashed:v.trashed||false };
+        email:v.email||'', phone:v.phone||'', trashed:v.trashed||false, provider:v.provider||'email' };
     });
     // auto-reactivate anyone whose temporary suspension has passed
     const now = Date.now();
@@ -1609,8 +1603,10 @@ function renderUsers(){
         <div class="uname">${u.name} <span class="tag ${statusTagClass(u)}">${statusLabel(u)}</span></div>
         <div class="usub">${u.email || u.phone || ''}${u.status==='suspended' && u.suspendUntil ? ' · ' + fmtSuspendRemaining(u.suspendUntil) : ''}</div>
         <div class="pwdrow">
-          <span class="pwdval">${u.pinVisible ? u.pin : '••••'}</span>
-          <button class="pwdtoggle" onclick="togglePwd('${u.id}')">${u.pinVisible?'Hide':'Show'}</button>
+          ${u.provider==='google'
+            ? `<span class="pwdval" style="color:var(--muted);">🔵 Google Sign-In (कोई password नहीं)</span>`
+            : `<span class="pwdval">${u.pinVisible ? u.pin : '••••'}</span><button class="pwdtoggle" onclick="togglePwd('${u.id}')">${u.pinVisible?'Hide':'Show'}</button>`
+          }
         </div>
       </div>
       <div class="actions">
