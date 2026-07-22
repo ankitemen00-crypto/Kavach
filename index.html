@@ -767,7 +767,10 @@
         <div class="avatar" id="opAvatar" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
         <div id="opName" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
         <div id="opFollowers" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
-        <button class="btn-primary" id="opFollowBtn" style="width:auto; padding:10px 34px; margin-top:16px;" onclick="toggleFollow()">Follow</button>
+        <div style="display:flex; gap:10px; margin-top:16px; justify-content:center;">
+          <button class="btn-primary" id="opFollowBtn" style="width:auto; padding:10px 30px;" onclick="toggleFollow()">Follow</button>
+          <button class="method-btn" id="opMessageBtn" style="width:auto; padding:10px 22px; flex:none;" onclick="messageUser()">💬 Message</button>
+        </div>
       </div>
 
       <div class="settings-section" style="margin-top:24px;">
@@ -791,6 +794,9 @@
     <div class="content">
       <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
         <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Profile</div>
+        <button class="lock-btn" id="notifBtn" onclick="navigate('notifications')" title="Notifications" style="font-size:19px; position:relative;">
+          🔔<span id="notifBadge" style="display:none; position:absolute; top:2px; right:2px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; background:var(--danger); color:#fff; font-size:9px; font-weight:700; align-items:center; justify-content:center;"></span>
+        </button>
         <button class="method-btn" id="profileEditBtn" onclick="toggleProfileEdit()">Edit</button>
         <button class="lock-btn" onclick="navigate('settings')" title="Settings" style="font-size:19px;">⚙️</button>
       </div>
@@ -826,6 +832,27 @@
       </div>
 
       <button class="btn-primary" id="profileSaveBtn" style="display:none; margin-top:6px;" onclick="saveProfile()">Save Profile</button>
+
+      <div class="settings-section" style="margin-top:22px;">
+        <div class="settings-label">My Stories</div>
+        <div class="search-grid" id="myStoriesGrid"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">My Reels</div>
+        <div class="search-grid" id="myReelsGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="screen" id="screen-notifications">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:1px solid var(--border); margin-bottom:12px;">
+        <button class="backbtn" onclick="navigate('profile')">←</button>
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Notifications</div>
+      </div>
+      <div id="notifList"></div>
     </div>
   </div>
 
@@ -1395,6 +1422,16 @@ const state = {
   ],
   otherProfileBackTo:'home',
   activeOtherProfileId:null,
+  notifications: [
+    {id:'n1', type:'story_like', text:'Ananya ने आपकी Story like की ❤️', time:'2h', read:false, color:'#3DDC97', initial:'AN'},
+    {id:'n2', type:'follow', text:'Kabir ने आपको Follow किया', time:'5h', read:false, color:'#F2B84B', initial:'K'},
+    {id:'n3', type:'follow_accept', text:'Rohit Office ने आपकी Follow request accept कर ली ✅', time:'1d', read:true, color:'#F2B84B', initial:'RO'},
+  ],
+  myStories: [],
+  myReels: [
+    {cap:'Sunset vibes yaar 🌅✨', likes:'128', comments:'12'},
+    {cap:'Weekend trip recap 🚗', likes:'340', comments:'28'},
+  ],
   storyDraft:{ filterId:'none', filterCss:'none', caption:'', song:null, hiddenFrom:[] },
   profile: {
     name:'Aap',
@@ -1451,6 +1488,7 @@ function navigate(screen){
   if(screen==='search'){ renderSearch(); loadDirectoryUsers(); }
   if(screen==='settings') renderSettings();
   if(screen==='profile') renderProfile();
+  if(screen==='notifications') renderNotifications();
   if(screen==='otherprofile') renderOtherProfileView();
   if(screen==='storycreate') renderStoryCreator();
 }
@@ -1642,6 +1680,22 @@ function toggleFollow(){
   u.followers += u.following ? 1 : -1;
   toast(u.following ? `✅ ${u.name} को Follow कर दिया` : `Unfollowed ${u.name}`);
   renderOtherProfileView();
+  if(u.following){
+    setTimeout(()=>{
+      addNotification('follow_accept', `${u.name} ने आपकी Follow request accept कर ली ✅`, u);
+    }, 2200);
+  }
+}
+
+function messageUser(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u) return;
+  let c = state.chats.find(x=>x.uid===u.id);
+  if(!c){
+    c = { id:'c_'+u.id, uid:u.id, name:u.name, color:u.color, last:'', time:'Now', locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[] };
+    state.chats.push(c);
+  }
+  openChat(c.id);
 }
 
 /* ---------------- PROFILE ---------------- */
@@ -1663,6 +1717,73 @@ function renderProfile(){
   document.getElementById('nameView').textContent = p.name;
   document.getElementById('nameEdit').value = p.name;
   setProfileEditMode(false);
+  renderMyContent();
+  updateNotifBadge();
+}
+
+function renderMyContent(){
+  const sEl = document.getElementById('myStoriesGrid');
+  if(sEl){
+    sEl.innerHTML = state.myStories.length ? state.myStories.map((s,i)=>`
+      <div class="search-card" onclick="viewMyStory(${i})">
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--mint), #0B0F14); filter:${s.filterCss||'none'};">📖<div class="search-play">▶</div></div>
+        <div class="search-meta"><div class="search-name">${s.caption || 'Story'}</div><div class="search-sub">${s.time}${s.song?' · 🎵':''}</div></div>
+      </div>`).join('') : '<div class="empty-hint">अभी कोई story post नहीं की</div>';
+  }
+  const rEl = document.getElementById('myReelsGrid');
+  if(rEl){
+    rEl.innerHTML = state.myReels.map(r=>`
+      <div class="search-card">
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--amber), #0B0F14);">🎬<div class="search-play">▶</div></div>
+        <div class="search-meta"><div class="search-name">${r.cap}</div><div class="search-sub">❤️ ${r.likes} · 💬 ${r.comments}</div></div>
+      </div>`).join('');
+  }
+}
+
+function viewMyStory(i){
+  const s = state.myStories[i];
+  if(!s) return;
+  toast('📖 ' + (s.caption || 'Story') + (s.song ? ' 🎵' : ''));
+}
+
+/* ---------------- NOTIFICATIONS ---------------- */
+function addNotification(type, text, relatedUser){
+  state.notifications.unshift({
+    id: 'n_' + Date.now() + Math.random().toString(36).slice(2,6),
+    type, text, time:'अभी', read:false,
+    color: relatedUser ? relatedUser.color : '#3DDC97',
+    initial: relatedUser ? initials(relatedUser.name) : '🔔'
+  });
+  updateNotifBadge();
+  toast(text);
+  if(state.currentScreen==='notifications') renderNotifications();
+}
+
+function updateNotifBadge(){
+  const badge = document.getElementById('notifBadge');
+  if(!badge) return;
+  const unread = state.notifications.filter(n=>!n.read).length;
+  badge.style.display = unread>0 ? 'flex' : 'none';
+  badge.textContent = unread>9 ? '9+' : String(unread);
+}
+
+function renderNotifications(){
+  const el = document.getElementById('notifList');
+  if(!state.notifications.length){
+    el.innerHTML = '<div class="empty-hint">अभी कोई notification नहीं है</div>';
+  } else {
+    el.innerHTML = state.notifications.map(n=>`
+      <div class="list-row">
+        <div class="avatar" style="background:${n.color};">${n.initial}</div>
+        <div class="row-main">
+          <div class="row-title">${n.text}</div>
+          <div class="row-sub">${n.time}</div>
+        </div>
+        ${n.read?'':'<div style="width:8px;height:8px;border-radius:50%;background:var(--mint);flex:0 0 auto;"></div>'}
+      </div>`).join('');
+  }
+  state.notifications.forEach(n=>n.read=true);
+  updateNotifBadge();
 }
 
 function setProfileEditMode(on){
@@ -1955,6 +2076,7 @@ function postStory(){
     song: d.song,
     hiddenFrom: d.hiddenFrom.slice()
   });
+  state.myStories.unshift({ caption: d.caption, filterCss: d.filterCss, song: d.song, time: 'अभी' });
   const hiddenNote = d.hiddenFrom.length ? ` (${d.hiddenFrom.length} contacts से hidden)` : '';
   toast('✅ Story post हो गई' + hiddenNote);
   navigate('home');
