@@ -417,8 +417,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<!-- Jitsi Meet — free, no API key needed, used for real audio/video calls -->
-<script src="https://meet.jit.si/external_api.js"></script>
 </head>
 <body>
 
@@ -950,10 +948,18 @@
       <div class="call-name" id="callName"></div>
       <div class="call-status" id="callStatusTxt">Calling…</div>
       <div class="call-controls">
+        <button class="ctrlbtn" id="muteBtn" onclick="toggleMute()">🎙️</button>
         <button class="ctrlbtn end" onclick="hangupCall()">📵</button>
       </div>
     </div>
-    <div id="jitsiCallContainer" style="display:none; position:absolute; inset:0;"></div>
+    <div id="callMediaContainer" style="display:none; position:absolute; inset:0; background:#000;">
+      <video id="remoteMedia" autoplay playsinline style="width:100%; height:100%; object-fit:cover; background:#000;"></video>
+      <video id="localVideo" autoplay playsinline muted style="display:none; position:absolute; width:100px; height:140px; bottom:120px; right:14px; border-radius:14px; border:2px solid #fff; object-fit:cover;"></video>
+      <div class="call-controls" style="position:absolute; bottom:34px; left:50%; transform:translateX(-50%);">
+        <button class="ctrlbtn" id="muteBtnVideo" onclick="toggleMute()">🎙️</button>
+        <button class="ctrlbtn end" onclick="hangupCall()">📵</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL: Incoming Call -->
@@ -2955,14 +2961,87 @@ function renderSettings(){
   }
 }
 
-/* ---------------- REAL CALLS (Jitsi Meet + Firestore signaling) ----------------
-   Jitsi Meet free/public server use hoti hai (koi API key/signup nahi chahiye,
-   isliye static GitHub Pages site par bhi kaam karta hai). Firestore 'calls'
-   collection sirf "ringing" ka signal bhejne ke liye use hoti hai taaki doosra
-   user real-time mein incoming call dekh sake aur dono same room mein jud sakein. */
-let jitsiApi = null;
+/* ---------------- REAL CALLS (direct WebRTC + Firestore signaling) ----------------
+   Koi third-party call server nahi — seedha browser-to-browser (peer-to-peer)
+   WebRTC connection banate hain. Firestore ka use sirf "signaling" ke liye hota
+   hai: offer/answer SDP aur ICE candidates exchange karne ke liye, aur "ringing"
+   ka real-time signal bhejne ke liye. Isse clear audio/video milta hai aur
+   koi login-wall/third-party limit nahi aati. */
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
+
+let pc = null;
+let localStream = null;
+let callType = 'audio';
 let activeCallDocId = null;
 let activeCallUnsub = null;
+let _candidatesUnsub = null;
+let isMuted = false;
+
+async function getLocalMedia(type){
+  const constraints = {
+    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+    video: type==='video' ? { width:{ideal:480}, height:{ideal:640} } : false
+  };
+  return navigator.mediaDevices.getUserMedia(constraints);
+}
+
+function setupPeerConnection(callId, role){
+  pc = new RTCPeerConnection(RTC_CONFIG);
+  const remoteVideo = document.getElementById('remoteMedia');
+  const remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+  pc.ontrack = (e)=>{ e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t)); };
+
+  localStream.getTracks().forEach(t=>pc.addTrack(t, localStream));
+
+  const myCandidatesCol = role==='caller' ? 'callerCandidates' : 'calleeCandidates';
+  const theirCandidatesCol = role==='caller' ? 'calleeCandidates' : 'callerCandidates';
+
+  pc.onicecandidate = (e)=>{
+    if(e.candidate){
+      db.collection('calls').doc(callId).collection(myCandidatesCol).add(e.candidate.toJSON()).catch(()=>{});
+    }
+  };
+
+  if(_candidatesUnsub) _candidatesUnsub();
+  _candidatesUnsub = db.collection('calls').doc(callId).collection(theirCandidatesCol).onSnapshot(snap=>{
+    snap.docChanges().forEach(change=>{
+      if(change.type==='added' && pc){
+        pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(()=>{});
+      }
+    });
+  });
+
+  return pc;
+}
+
+function showActiveCallUI(){
+  document.getElementById('localVideo').srcObject = localStream;
+  document.getElementById('localVideo').style.display = callType==='video' ? 'block' : 'none';
+  if(callType==='video'){
+    document.getElementById('callWaitingUI').style.display = 'none';
+    document.getElementById('callMediaContainer').style.display = 'block';
+  } else {
+    // audio call: remoteMedia video element stays hidden inside callMediaContainer
+    // lekin DOM mein rehta hai isliye audio playback chalta rehta hai
+    document.getElementById('callMediaContainer').style.display = 'none';
+  }
+}
+
+function toggleMute(){
+  if(!localStream) return;
+  isMuted = !isMuted;
+  localStream.getAudioTracks().forEach(t=> t.enabled = !isMuted);
+  const label = isMuted ? '🔇' : '🎙️';
+  const b1 = document.getElementById('muteBtn'); if(b1) b1.textContent = label;
+  const b2 = document.getElementById('muteBtnVideo'); if(b2) b2.textContent = label;
+}
 
 function callFromChat(type){
   const c = state.chats.find(x=>x.id===state.activeChatId);
@@ -2972,29 +3051,47 @@ function callFromChat(type){
 
 async function startCallReal(otherUid, otherName, otherColor, type){
   if(!auth.currentUser) return;
+  callType = type;
+  isMuted = false;
   document.getElementById('callAvatar').textContent = initials(otherName);
   document.getElementById('callName').textContent = otherName;
   document.getElementById('callStatusTxt').textContent = 'Calling…';
   document.getElementById('callWaitingUI').style.display = 'flex';
-  document.getElementById('jitsiCallContainer').style.display = 'none';
+  document.getElementById('callMediaContainer').style.display = 'none';
   state.callBackTo = 'chats';
   navigate('call');
 
-  const room = 'kavach_' + chatIdFor(auth.currentUser.uid, otherUid) + '_' + Date.now();
-  const callDoc = await db.collection('calls').add({
+  try{
+    localStream = await getLocalMedia(type);
+  }catch(e){
+    toast('❌ Camera/Mic access नहीं मिला: ' + e.message, true);
+    navigate(state.callBackTo || 'chats');
+    return;
+  }
+
+  const callRef = db.collection('calls').doc();
+  activeCallDocId = callRef.id;
+  setupPeerConnection(callRef.id, 'caller');
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await callRef.set({
     from: auth.currentUser.uid, fromName: state.profile.name,
-    to: otherUid, toName: otherName, type, room,
-    status: 'ringing', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    to: otherUid, toName: otherName, type,
+    status: 'ringing',
+    offer: { type: offer.type, sdp: offer.sdp },
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
-  activeCallDocId = callDoc.id;
 
   if(activeCallUnsub) activeCallUnsub();
-  activeCallUnsub = callDoc.onSnapshot(snap=>{
+  activeCallUnsub = callRef.onSnapshot(async snap=>{
     const d = snap.data();
     if(!d) return;
-    if(d.status === 'accepted'){
+    if(d.answer && pc && !pc.currentRemoteDescription){
+      await pc.setRemoteDescription(new RTCSessionDescription(d.answer));
       document.getElementById('callStatusTxt').textContent = 'Connected';
-      joinJitsiRoom(room, type, otherName);
+      showActiveCallUI();
     } else if(d.status === 'declined'){
       toast('❌ ' + otherName + ' ने call decline कर दी', true);
       endCallCleanup();
@@ -3002,22 +3099,6 @@ async function startCallReal(otherUid, otherName, otherColor, type){
       endCallCleanup();
     }
   });
-}
-
-function joinJitsiRoom(room, type, otherName){
-  document.getElementById('callWaitingUI').style.display = 'none';
-  const container = document.getElementById('jitsiCallContainer');
-  container.style.display = 'block';
-  container.innerHTML = '';
-  jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
-    roomName: room,
-    parentNode: container,
-    width: '100%', height: '100%',
-    userInfo: { displayName: state.profile.name },
-    configOverwrite: { startWithVideoMuted: type !== 'video', prejoinPageEnabled: false },
-    interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['microphone','camera','hangup','tileview','chat'] }
-  });
-  jitsiApi.addEventListener('videoConferenceLeft', ()=>{ hangupCall(); });
 }
 
 function hangupCall(){
@@ -3028,11 +3109,16 @@ function hangupCall(){
 }
 
 function endCallCleanup(){
-  if(jitsiApi){ try{ jitsiApi.dispose(); }catch(e){} jitsiApi = null; }
+  if(pc){ try{ pc.close(); }catch(e){} pc = null; }
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
   if(activeCallUnsub){ activeCallUnsub(); activeCallUnsub = null; }
+  if(_candidatesUnsub){ _candidatesUnsub(); _candidatesUnsub = null; }
   activeCallDocId = null;
-  document.getElementById('jitsiCallContainer').innerHTML = '';
-  document.getElementById('jitsiCallContainer').style.display = 'none';
+  const remoteVideo = document.getElementById('remoteMedia');
+  if(remoteVideo) remoteVideo.srcObject = null;
+  const localVideo = document.getElementById('localVideo');
+  if(localVideo) localVideo.srcObject = null;
+  document.getElementById('callMediaContainer').style.display = 'none';
   document.getElementById('callWaitingUI').style.display = 'flex';
   navigate(state.callBackTo || 'chats');
 }
@@ -3075,21 +3161,43 @@ async function acceptIncomingCall(){
   if(!incomingCall) return;
   const call = incomingCall;
   hideIncomingCallModal();
-  await db.collection('calls').doc(call.id).set({ status:'accepted' }, { merge:true });
+  callType = call.type;
+  isMuted = false;
+
   document.getElementById('callAvatar').textContent = initials(call.fromName||'?');
   document.getElementById('callName').textContent = call.fromName || 'Unknown';
-  document.getElementById('callStatusTxt').textContent = 'Connected';
+  document.getElementById('callStatusTxt').textContent = 'Connecting…';
   document.getElementById('callWaitingUI').style.display = 'flex';
-  document.getElementById('jitsiCallContainer').style.display = 'none';
+  document.getElementById('callMediaContainer').style.display = 'none';
   activeCallDocId = call.id;
   state.callBackTo = 'chats';
   navigate('call');
+
+  try{
+    localStream = await getLocalMedia(call.type);
+  }catch(e){
+    toast('❌ Camera/Mic access नहीं मिला: ' + e.message, true);
+    await db.collection('calls').doc(call.id).set({ status:'declined' }, { merge:true });
+    navigate(state.callBackTo || 'chats');
+    return;
+  }
+
+  const callRef = db.collection('calls').doc(call.id);
+  setupPeerConnection(call.id, 'callee');
+
+  await pc.setRemoteDescription(new RTCSessionDescription(call.offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await callRef.set({ status:'accepted', answer: { type:answer.type, sdp:answer.sdp } }, { merge:true });
+
+  document.getElementById('callStatusTxt').textContent = 'Connected';
+  showActiveCallUI();
+
   if(activeCallUnsub) activeCallUnsub();
-  activeCallUnsub = db.collection('calls').doc(call.id).onSnapshot(snap=>{
+  activeCallUnsub = callRef.onSnapshot(snap=>{
     const d = snap.data();
     if(d && d.status==='ended') endCallCleanup();
   });
-  joinJitsiRoom(call.room, call.type, call.fromName);
 }
 
 function declineIncomingCall(){
