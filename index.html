@@ -136,7 +136,7 @@
   .stories-row{ display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--border); -ms-overflow-style:none; scrollbar-width:none; }
   .stories-row::-webkit-scrollbar{ display:none; }
   .story{ flex:0 0 auto; text-align:center; width:62px; }
-  .story-ring{ width:58px; height:58px; border-radius:50%; padding:2.5px; background:linear-gradient(135deg,var(--mint),#1E90A0); display:flex; align-items:center; justify-content:center; }
+  .story-ring{ width:58px; height:58px; border-radius:50%; padding:2.5px; background:var(--brand-grad); display:flex; align-items:center; justify-content:center; }
   .story-ring.seen{ background:var(--border); }
   .story-avatar{ width:100%; height:100%; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-family:'Space Grotesk'; font-size:16px; }
   .story-name{ font-size:11px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -297,6 +297,11 @@
 
   /* ---------- STORY CREATOR ---------- */
   .story-preview{ height:280px; border-radius:18px; background:linear-gradient(160deg,#1A222D,#0B0F14); display:flex; align-items:center; justify-content:center; font-size:56px; margin-top:8px; border:1px solid var(--border); transition:filter .2s; }
+  .story-preview-wrap{ position:relative; }
+  .camera-rail{ position:absolute; top:16px; left:12px; display:flex; flex-direction:column; gap:14px; }
+  .camera-rail-btn{ text-align:center; cursor:pointer; }
+  .camera-rail-icon{ width:38px; height:38px; border-radius:50%; background:rgba(11,15,20,0.55); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:16px; margin:0 auto; }
+  .camera-rail-label{ font-size:9.5px; color:#fff; margin-top:4px; text-shadow:0 1px 3px rgba(0,0,0,0.6); }
   .filters-row{ display:flex; gap:12px; overflow-x:auto; padding:10px 2px 4px; -ms-overflow-style:none; scrollbar-width:none; }
   .filters-row::-webkit-scrollbar{ display:none; }
   .filter-chip{ flex:0 0 auto; text-align:center; cursor:pointer; width:58px; }
@@ -310,6 +315,31 @@
   .search-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .search-card{ border-radius:14px; overflow:hidden; background:var(--surface); border:1px solid var(--border); cursor:pointer; }
   .search-thumb{ height:150px; position:relative; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:26px; color:#06110B; }
+
+  /* ---------- CHATS (new design) ---------- */
+  .chats-search-input{ width:100%; margin:12px 0 14px; }
+  .quick-contacts-row{ display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; margin-bottom:6px; -ms-overflow-style:none; scrollbar-width:none; }
+  .quick-contacts-row::-webkit-scrollbar{ display:none; }
+  .quick-contact{ flex:0 0 auto; text-align:center; width:58px; cursor:pointer; }
+  .quick-contact .avatar{ width:52px; height:52px; margin:0 auto; }
+  .quick-contact .qc-name{ font-size:10.5px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .suggested-follow-btn{ background:var(--brand-grad); color:#fff; border:none; }
+
+  /* ---------- PROFILE (new design) ---------- */
+  .profile-ring{ box-shadow:0 0 0 3px var(--bg), 0 0 0 5px transparent; border:3px solid transparent; background-clip:padding-box, border-box; background-origin:padding-box, border-box; background-image:linear-gradient(var(--bg),var(--bg)), var(--brand-grad); }
+  .profile-stats-row{ display:flex; justify-content:center; gap:34px; margin-top:16px; }
+  .profile-stats-row .stat{ text-align:center; }
+  .profile-stats-row .stat-num{ font-family:'Space Grotesk'; font-weight:700; font-size:16px; }
+  .profile-stats-row .stat-label{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .profile-highlights-row{ display:flex; gap:14px; overflow-x:auto; padding:16px 2px 4px; -ms-overflow-style:none; scrollbar-width:none; }
+  .profile-highlights-row::-webkit-scrollbar{ display:none; }
+  .highlight-bubble{ flex:0 0 auto; text-align:center; width:60px; cursor:pointer; }
+  .highlight-ring{ width:56px; height:56px; border-radius:50%; padding:2.5px; background:var(--brand-grad); display:flex; align-items:center; justify-content:center; margin:0 auto; }
+  .highlight-inner{ width:100%; height:100%; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .highlight-label{ font-size:10.5px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .profile-tabs{ display:flex; gap:8px; margin:18px 0 12px; border-bottom:1px solid var(--border); }
+  .profile-tab{ flex:1; background:none; border:none; color:var(--muted); font-weight:600; font-size:13px; padding:10px 4px; cursor:pointer; border-bottom:2px solid transparent; }
+  .profile-tab.active{ color:var(--text); border-bottom:2px solid var(--brand-pink); }
   .search-play{ position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
   .search-locked{ position:absolute; top:8px; left:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; }
   .search-meta{ padding:9px 10px 11px; }
@@ -660,8 +690,13 @@
 
   <!-- CHATS -->
   <div class="screen" id="screen-chats">
-    <div class="topbar"><h1>Chats</h1><div class="lockchip">🛡 Secured</div></div>
-    <div class="content" id="chatsList"></div>
+    <div class="topbar"><h1>Messages</h1><div class="lockchip">🔒 End-to-end encrypted</div></div>
+    <div class="content">
+      <input type="text" id="chatsSearchInput" class="msg-input chats-search-input" placeholder="Chats में search करें..." oninput="renderChats()">
+      <div class="settings-label" id="quickContactsLabel" style="display:none;">Contacts</div>
+      <div class="quick-contacts-row" id="quickContactsRow"></div>
+      <div id="chatsList"></div>
+    </div>
   </div>
 
   <!-- GROUPS -->
@@ -672,7 +707,7 @@
 
   <!-- SEARCH -->
   <div class="screen" id="screen-search">
-    <div class="topbar"><h1>Search</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="topbar"><h1>Discover</h1><div class="lockchip">🛡 Secured</div></div>
     <div class="content">
       <input type="text" id="searchInput" class="msg-input" style="width:100%; margin-bottom:14px;" placeholder="Chats, groups या contacts search करें..." oninput="renderSearch()">
       <div id="searchResults"></div>
@@ -800,7 +835,23 @@
         <button class="btn-primary" style="width:auto; padding:9px 18px;" onclick="postStory()">Post</button>
       </div>
 
-      <div class="story-preview" id="storyPreview">✨</div>
+      <div class="story-preview-wrap">
+        <div class="story-preview" id="storyPreview">✨</div>
+        <div class="camera-rail">
+          <div class="camera-rail-btn" onclick="document.getElementById('filtersRow').scrollIntoView({behavior:'smooth'});">
+            <div class="camera-rail-icon">🎨</div><div class="camera-rail-label">Filters</div>
+          </div>
+          <div class="camera-rail-btn" onclick="toast('✨ Effects जल्दी आ रहे हैं')">
+            <div class="camera-rail-icon">🌀</div><div class="camera-rail-label">Effects</div>
+          </div>
+          <div class="camera-rail-btn" onclick="openSongSearch()">
+            <div class="camera-rail-icon">🎵</div><div class="camera-rail-label">Music</div>
+          </div>
+          <div class="camera-rail-btn" onclick="toast('💄 Beauty जल्दी आ रहा है')">
+            <div class="camera-rail-icon">💄</div><div class="camera-rail-label">Beauty</div>
+          </div>
+        </div>
+      </div>
 
       <div class="settings-label" style="margin-top:16px;">Filters</div>
       <div class="filters-row" id="filtersRow"></div>
@@ -887,12 +938,18 @@
       </div>
 
       <div style="text-align:center; margin-top:6px;">
-        <div class="avatar" id="profileAvatarBig" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
+        <div class="avatar profile-ring" id="profileAvatarBig" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
         <div id="profileNameView" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
         <div style="font-size:12px; color:var(--muted); margin-top:3px;">🛡 End-to-end secured profile</div>
+
+        <div class="profile-stats-row">
+          <div class="stat"><div class="stat-num" id="statPosts">0</div><div class="stat-label">Posts</div></div>
+          <div class="stat"><div class="stat-num" id="statFollowers">0</div><div class="stat-label">Followers</div></div>
+          <div class="stat"><div class="stat-num" id="statFollowing">0</div><div class="stat-label">Following</div></div>
+        </div>
       </div>
 
-      <div class="settings-section" style="margin-top:22px;">
+      <div class="settings-section" style="margin-top:18px;">
         <div class="settings-label">Bio</div>
         <div class="settings-card" style="padding:14px 16px;">
           <div id="bioView" style="font-size:13.5px; line-height:1.5; color:var(--text);"></div>
@@ -918,7 +975,14 @@
 
       <button class="btn-primary" id="profileSaveBtn" style="display:none; margin-top:6px;" onclick="saveProfile()">Save Profile</button>
 
-      <div class="settings-section" style="margin-top:22px;">
+      <div class="profile-highlights-row" id="profileHighlights"></div>
+
+      <div class="profile-tabs">
+        <button class="profile-tab active" id="profileTabStories" onclick="setProfileTab('stories')">📖 Stories</button>
+        <button class="profile-tab" id="profileTabReels" onclick="setProfileTab('reels')">🎬 Reels</button>
+      </div>
+
+      <div class="settings-section" id="myStoriesSection" style="margin-top:4px;">
         <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
           <span>My Stories</span>
           <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openStoryCreator()">+ Story</button>
@@ -926,7 +990,7 @@
         <div class="search-grid" id="myStoriesGrid"></div>
       </div>
 
-      <div class="settings-section">
+      <div class="settings-section" id="myReelsSection" style="margin-top:4px; display:none;">
         <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
           <span>My Reels</span>
           <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openReelCreator()">+ Reel</button>
@@ -2111,8 +2175,8 @@ function renderOtherProfileView(){
   document.getElementById('opBday').textContent = fmtBday(u.birthday);
   const btn = document.getElementById('opFollowBtn');
   btn.textContent = u.following ? 'Following ✓' : 'Follow';
-  btn.style.background = u.following ? 'var(--surface-2)' : 'var(--mint)';
-  btn.style.color = u.following ? 'var(--text)' : '#06110B';
+  btn.style.background = u.following ? 'var(--surface-2)' : 'var(--brand-grad)';
+  btn.style.color = '#fff';
   btn.style.border = u.following ? '1px solid var(--border)' : 'none';
 }
 
@@ -2162,7 +2226,37 @@ function renderProfile(){
   document.getElementById('nameEdit').value = p.name;
   setProfileEditMode(false);
   renderMyContent();
+  renderProfileStats();
+  renderProfileHighlights();
   updateNotifBadge();
+}
+
+function renderProfileStats(){
+  const posts = (state.myStories ? state.myStories.length : 0) + (state.myReels ? state.myReels.length : 0);
+  const following = (state.otherUsers || []).filter(u=>u.following).length;
+  document.getElementById('statPosts').textContent = posts;
+  document.getElementById('statFollowing').textContent = following;
+  // Followers isn't tracked for the logged-in account yet (no reverse-follow data source), so show 0 honestly rather than a fake number.
+  document.getElementById('statFollowers').textContent = 0;
+}
+
+function renderProfileHighlights(){
+  const el = document.getElementById('profileHighlights');
+  if(!el) return;
+  const stories = state.myStories || [];
+  if(!stories.length){ el.innerHTML = ''; return; }
+  el.innerHTML = stories.slice(0,8).map((s,i)=>`
+    <div class="highlight-bubble" onclick="viewMyStory(${i})">
+      <div class="highlight-ring"><div class="highlight-inner">📖</div></div>
+      <div class="highlight-label">${s.caption || 'Story'}</div>
+    </div>`).join('');
+}
+
+function setProfileTab(tab){
+  document.getElementById('profileTabStories').classList.toggle('active', tab==='stories');
+  document.getElementById('profileTabReels').classList.toggle('active', tab==='reels');
+  document.getElementById('myStoriesSection').style.display = tab==='stories' ? 'block' : 'none';
+  document.getElementById('myReelsSection').style.display = tab==='reels' ? 'block' : 'none';
 }
 
 function renderMyContent(){
@@ -2170,7 +2264,7 @@ function renderMyContent(){
   if(sEl){
     sEl.innerHTML = state.myStories.length ? state.myStories.map((s,i)=>`
       <div class="search-card" onclick="viewMyStory(${i})">
-        <div class="search-thumb" style="background:linear-gradient(160deg, var(--mint), #0B0F14); filter:${s.filterCss||'none'};">📖<div class="search-play">▶</div></div>
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--brand-pink), var(--brand-purple)); filter:${s.filterCss||'none'};">📖<div class="search-play">▶</div></div>
         <div class="search-meta"><div class="search-name">${s.caption || 'Story'}</div><div class="search-sub">${s.time}${s.song?' · 🎵':''}</div></div>
       </div>`).join('') : '<div class="empty-hint">अभी कोई story post नहीं की</div>';
   }
@@ -2178,7 +2272,7 @@ function renderMyContent(){
   if(rEl){
     rEl.innerHTML = state.myReels.map(r=>`
       <div class="search-card">
-        <div class="search-thumb" style="background:linear-gradient(160deg, var(--amber), #0B0F14);">🎬<div class="search-play">▶</div></div>
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--brand-purple), var(--brand-blue));">🎬<div class="search-play">▶</div></div>
         <div class="search-meta"><div class="search-name">${r.cap}</div><div class="search-sub">❤️ ${r.likes} · 💬 ${r.comments}</div></div>
       </div>`).join('');
   }
@@ -2878,8 +2972,12 @@ function subscribeChats(){
 
 function renderChats(){
   const el = document.getElementById('chatsList');
-  if(state.chats.length===0){ el.innerHTML = '<div class="empty-hint">अभी कोई chat नहीं है — किसी contact की profile खोल कर Message पर टैप करें।</div>'; return; }
-  el.innerHTML = state.chats.map(c=>`
+  const searchEl = document.getElementById('chatsSearchInput');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const list = q ? state.chats.filter(c=>c.name.toLowerCase().includes(q)) : state.chats;
+  renderQuickContacts();
+  if(list.length===0){ el.innerHTML = `<div class="empty-hint">${q ? 'कोई matching chat नहीं मिली' : 'अभी कोई chat नहीं है — किसी contact की profile खोल कर Message पर टैप करें।'}</div>`; return; }
+  el.innerHTML = list.map(c=>`
     <div class="list-row">
       <div class="avatar" onclick="openOtherProfile('${c.uid}','chats')" style="background:${c.color};cursor:pointer;">${initials(c.name)}</div>
       <div class="row-main" onclick="openChat('${c.id}')" style="cursor:pointer;">
@@ -2888,6 +2986,20 @@ function renderChats(){
       </div>
       <div class="row-time">${c.time}</div>
       <button class="lock-btn ${c.locked?'on':''}" onclick="event.stopPropagation(); handleLockToggle('${c.id}','chat')">${c.locked?'🔒':'🔓'}</button>
+    </div>`).join('');
+}
+
+function renderQuickContacts(){
+  const row = document.getElementById('quickContactsRow');
+  const label = document.getElementById('quickContactsLabel');
+  if(!row) return;
+  const contacts = (state.otherUsers || []).slice(0, 12);
+  if(!contacts.length){ row.innerHTML=''; if(label) label.style.display='none'; return; }
+  if(label) label.style.display = 'block';
+  row.innerHTML = contacts.map(u=>`
+    <div class="quick-contact" onclick="openOtherProfile('${u.id}','chats')">
+      <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+      <div class="qc-name">${u.name}</div>
     </div>`).join('');
 }
 
@@ -2936,10 +3048,40 @@ async function loadDirectoryUsers(){
   if(state.currentScreen==='search') renderSearch();
 }
 
+function renderSuggestedForYou(){
+  const suggestions = (state.otherUsers || []).filter(u=>!u.following);
+  if(!suggestions.length){
+    return '<div class="empty-hint">Chats, groups या contacts search करने के लिए टाइप करें</div>';
+  }
+  return `<div class="search-section-label">Suggested for you</div>` + suggestions.map(u=>`
+    <div class="list-row">
+      <div class="avatar" onclick="openOtherProfile('${u.id}','search')" style="background:${u.color};cursor:pointer;">${initials(u.name)}</div>
+      <div class="row-main" onclick="openOtherProfile('${u.id}','search')" style="cursor:pointer;">
+        <div class="row-title">${u.name}</div>
+        <div class="row-sub">${u.followers||0} followers</div>
+      </div>
+      <button class="method-btn suggested-follow-btn" style="flex:none;width:auto;padding:8px 16px;" onclick="event.stopPropagation(); quickToggleFollow('${u.id}')">Follow</button>
+    </div>`).join('');
+}
+
+function quickToggleFollow(id){
+  const u = state.otherUsers.find(x=>x.id===id);
+  if(!u) return;
+  u.following = !u.following;
+  u.followers += u.following ? 1 : -1;
+  toast(u.following ? `✅ ${u.name} को Follow कर दिया` : `Unfollowed ${u.name}`);
+  renderSearch();
+  if(u.following){
+    setTimeout(()=>{
+      addNotification('follow_accept', `${u.name} ने आपकी Follow request accept कर ली ✅`, u);
+    }, 2200);
+  }
+}
+
 function renderSearch(){
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
   const el = document.getElementById('searchResults');
-  if(!q){ el.innerHTML = '<div class="empty-hint">Chats, groups या contacts search करने के लिए टाइप करें</div>'; return; }
+  if(!q){ el.innerHTML = renderSuggestedForYou(); return; }
 
   const chatMatches = state.chats.filter(c=>c.name.toLowerCase().includes(q));
   const groupMatches = state.groups.filter(g=>g.name.toLowerCase().includes(q));
