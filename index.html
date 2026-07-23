@@ -3278,6 +3278,28 @@ function toggleLockFromDetail(){
   handleLockToggle(state.activeChatId, 'chat');
 }
 
+// Actually deletes all messages in Firestore for this chat (server-side),
+// so the "delete" is permanent and won't come back via onSnapshot.
+async function deleteChatMessagesFromServer(chatId){
+  try{
+    const msgsRef = db.collection('chats').doc(chatId).collection('messages');
+    let snap = await msgsRef.limit(400).get();
+    while(!snap.empty){
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      snap = await msgsRef.limit(400).get();
+    }
+    await db.collection('chats').doc(chatId).set({
+      lastMessage: '⚠️ Chat delete कर दी गई',
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+  } catch(e){
+    console.error('deleteChatMessagesFromServer failed:', e);
+    toast('❌ Server से messages delete नहीं हो पाए: ' + e.message, true);
+  }
+}
+
 /* ---------------- MODAL (PIN set / unlock / remove / change app pin) ---------------- */
 function openModal(ctx){
   state.modalCtx = ctx;
@@ -3364,14 +3386,16 @@ function processModalPin(){
     item.attempts += 1;
     state.currentInput='';
     if(item.attempts >= 5){
-      // DELETE the chat/group messages
+      // DELETE the chat/group messages — actually remove from Firestore, not just local memory
       if(ctx.kind==='chat'){
         item.messages = [];
         item.last = '⚠️ Chat delete कर दी गई';
         item.locked = false; item.pin = null; item.attempts = 0; item.unlockedThisSession=false;
+        deleteChatMessagesFromServer(item.id);
       } else {
         item.last = '⚠️ Group data delete कर दिया गया';
         item.locked = false; item.pin = null; item.attempts = 0;
+        deleteChatMessagesFromServer(item.id);
       }
       warn.textContent = '';
       closeModal();
