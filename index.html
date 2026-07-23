@@ -1,6 +1,3449 @@
 
 <!DOCTYPE html>
 <html lang="hi">
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kavach — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14;
+    --surface:#131922;
+    --surface-2:#1A222D;
+    --border:#232C38;
+    --text:#EDF2F7;
+    --muted:#7C8A9A;
+    --mint:#3DDC97;
+    --mint-dim:#1F5C42;
+    --amber:#F2B84B;
+    --danger:#E5484D;
+    --danger-dim:#3A1E20;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #101722 0%, #05070A 70%);
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Inter', sans-serif;
+    color:var(--text);
+    padding:24px 12px;
+  }
+  .phone{
+    width:390px; max-width:100%;
+    height:800px; max-height:92vh;
+    background:var(--bg);
+    border-radius:36px;
+    border:1px solid #262F3B;
+    box-shadow:0 40px 80px -20px rgba(0,0,0,0.7), 0 0 0 8px #05070A, 0 0 0 9px #2A3441;
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+  }
+  .statusbar{
+    height:34px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 22px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted);
+  }
+  .screen{
+    flex:1 1 auto; overflow-y:auto; position:relative;
+    display:none;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .screen::-webkit-scrollbar{display:none;}
+  .screen.active{display:flex; flex-direction:column;}
+
+  /* ---------- LOCK SCREEN ---------- */
+  #screen-lock{ justify-content:space-between; padding:40px 28px 32px; text-align:center; }
+  .lock-top{ margin-top:30px; }
+  .shield-wrap{ position:relative; width:96px; height:96px; margin:0 auto 18px; }
+  .shield-ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:2px solid var(--mint-dim);
+  }
+  .shield-ring.pulse{ animation:pulse 1.4s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(61,220,151,0.35); }
+    100%{ box-shadow:0 0 0 18px rgba(61,220,151,0); }
+  }
+  .shield-icon{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:700; font-size:15px; color:var(--mint);
+  }
+  .shield-icon svg{ width:42px; height:42px; }
+  .brand{ font-family:'Space Grotesk'; font-weight:700; font-size:26px; letter-spacing:0.5px; }
+  .brand span{ color:var(--mint); }
+  .lock-sub{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .lock-status{ font-size:13px; color:var(--muted); min-height:20px; margin-top:14px; }
+  .lock-status.err{ color:var(--danger); font-weight:600; }
+
+  .pindots{ display:flex; gap:16px; justify-content:center; margin:26px 0 6px; }
+  .pindot{ width:14px; height:14px; border-radius:50%; border:2px solid var(--border); transition:all .15s; }
+  .pindot.filled{ background:var(--mint); border-color:var(--mint); }
+  .pindot.error{ background:var(--danger); border-color:var(--danger); }
+
+  .numpad{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+  .numkey{
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    font-family:'Space Grotesk'; font-size:20px; font-weight:600;
+    height:64px; border-radius:18px; cursor:pointer; transition:background .12s, transform .08s;
+  }
+  .numkey:active{ transform:scale(0.94); background:var(--surface-2); }
+  .numkey.ghost{ background:transparent; border:none; color:var(--muted); font-size:13px; font-family:'Inter'; }
+
+  .lock-methods{ display:flex; gap:10px; justify-content:center; margin-top:18px; }
+  .method-btn{
+    flex:1; background:var(--surface); border:1px solid var(--border); color:var(--muted);
+    padding:10px 6px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .method-btn.active{ color:var(--mint); border-color:var(--mint-dim); background:rgba(61,220,151,0.08); }
+
+  .pattern-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px; justify-content:center; margin:30px auto 10px; width:220px; }
+  .pnode{ width:20px; height:20px; border-radius:50%; border:2px solid var(--border); margin:0 auto; position:relative; }
+  .pnode.on{ background:var(--mint); border-color:var(--mint); box-shadow:0 0 0 6px rgba(61,220,151,0.15); }
+  .pnode.err{ background:var(--danger); border-color:var(--danger); }
+
+  .faceid-box{ margin-top:34px; }
+  .face-circle{
+    width:120px; height:120px; border-radius:50%; margin:0 auto 18px;
+    border:2px dashed var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:36px;
+  }
+  .face-circle.scanning{ border-color:var(--mint); animation:pulse 1s ease-out infinite; }
+  .btn-primary{
+    background:var(--mint); color:#06110B; border:none; font-weight:700; font-family:'Space Grotesk';
+    padding:14px 20px; border-radius:14px; font-size:14px; cursor:pointer; width:100%;
+  }
+  .btn-primary:active{ transform:scale(0.98); }
+
+  /* ---------- APP SHELL ---------- */
+  .topbar{
+    padding:16px 18px 12px; display:flex; align-items:center; justify-content:space-between; flex:0 0 auto;
+    border-bottom:1px solid var(--border);
+  }
+  .topbar h1{ font-family:'Space Grotesk'; font-size:19px; font-weight:700; }
+  .topbar .lockchip{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--mint); background:rgba(61,220,151,0.08); padding:5px 9px; border-radius:20px; border:1px solid var(--mint-dim); }
+  .content{ flex:1; overflow-y:auto; padding:14px 16px 90px; }
+  .content::-webkit-scrollbar{ display:none; }
+
+  .stories-row{ display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--border); -ms-overflow-style:none; scrollbar-width:none; }
+  .stories-row::-webkit-scrollbar{ display:none; }
+  .story{ flex:0 0 auto; text-align:center; width:62px; }
+  .story-ring{ width:58px; height:58px; border-radius:50%; padding:2.5px; background:linear-gradient(135deg,var(--mint),#1E90A0); display:flex; align-items:center; justify-content:center; }
+  .story-ring.seen{ background:var(--border); }
+  .story-avatar{ width:100%; height:100%; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-family:'Space Grotesk'; font-size:16px; }
+  .story-name{ font-size:11px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .reel-card{ border-radius:18px; overflow:hidden; margin-bottom:14px; border:1px solid var(--border); background:var(--surface); }
+  .reel-media{ height:190px; background:linear-gradient(160deg,#1A222D,#0B0F14); display:flex; align-items:center; justify-content:center; font-size:34px; color:var(--muted); position:relative; }
+  .reel-tag{ position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); font-size:10px; padding:4px 8px; border-radius:8px; font-weight:700; letter-spacing:0.5px; }
+  .reel-meta{ padding:10px 14px 14px; }
+  .reel-user{ font-weight:600; font-size:13px; }
+  .reel-cap{ font-size:12px; color:var(--muted); margin-top:3px; }
+
+  .list-row{ display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+  .avatar{ width:48px; height:48px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:16px; color:#06110B; }
+  .row-main{ flex:1; min-width:0; }
+  .row-title{ font-weight:600; font-size:14px; display:flex; align-items:center; gap:6px; }
+  .row-sub{ font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row-sub.blur{ filter:blur(4px); user-select:none; }
+  .row-time{ font-size:11px; color:var(--muted); flex:0 0 auto; }
+  .lock-btn{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:6px; flex:0 0 auto; }
+  .lock-btn.on{ color:var(--amber); }
+  .badge-locked{ font-size:10px; color:var(--amber); background:rgba(242,184,75,0.1); border:1px solid #5C4A22; padding:2px 6px; border-radius:6px; font-weight:700; }
+
+  .group-avatars{ display:flex; width:48px; height:48px; flex:0 0 auto; position:relative; }
+  .group-avatars .avatar{ width:32px; height:32px; position:absolute; font-size:12px; border:2px solid var(--bg); }
+  .group-avatars .avatar:nth-child(1){ top:0; left:0; z-index:2; }
+  .group-avatars .avatar:nth-child(2){ bottom:0; right:0; z-index:1; }
+
+  .call-icon{ width:40px; height:40px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex:0 0 auto; font-size:15px; }
+  .call-type{ font-size:11px; }
+  .call-type.missed{ color:var(--danger); }
+
+  /* bottom nav */
+  .bottomnav{
+    position:absolute; bottom:0; left:0; right:0; height:72px;
+    background:rgba(19,25,34,0.92); backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-around;
+    padding-bottom:8px;
+  }
+  .navbtn{ background:none; border:none; color:var(--muted); font-size:20px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; flex:1; }
+  .navbtn span{ font-size:10px; font-weight:600; }
+  .navbtn.active{ color:var(--mint); }
+
+  /* chat detail */
+  #screen-chatdetail .content{ display:flex; flex-direction:column; padding-bottom:14px; }
+  .chatdetail-header{ display:flex; align-items:center; gap:10px; padding:10px 4px 16px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+  .backbtn{ background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; }
+  .msgs{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .msg{ max-width:75%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.4; }
+  .msg.in{ background:var(--surface-2); align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.out{ background:var(--mint-dim); align-self:flex-end; border-bottom-right-radius:4px; color:#DFFFF1; }
+  .msg-input-row{ display:flex; gap:8px; margin-top:14px; }
+  .msg-input{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:11px 16px; color:var(--text); font-size:13px; }
+  .sendbtn{ background:var(--mint); border:none; width:42px; height:42px; border-radius:50%; font-size:16px; cursor:pointer; }
+
+  /* call screen */
+  #screen-call .content{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; height:100%; }
+  .call-avatar-big{ width:110px; height:110px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:38px; font-family:'Space Grotesk'; font-weight:700; margin-bottom:16px; }
+  .call-name{ font-family:'Space Grotesk'; font-size:20px; font-weight:700; }
+  .call-status{ color:var(--mint); font-size:13px; margin-top:6px; }
+  .call-controls{ display:flex; gap:20px; margin-top:44px; }
+  .ctrlbtn{ width:56px; height:56px; border-radius:50%; background:var(--surface-2); border:1px solid var(--border); font-size:20px; cursor:pointer; }
+  .ctrlbtn.end{ background:var(--danger); }
+
+  /* settings */
+  .settings-section{ margin-bottom:22px; }
+  .settings-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:8px; font-weight:700; }
+  .settings-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row .desc{ color:var(--muted); font-size:11.5px; margin-top:2px; }
+
+  /* modal */
+  .modal-overlay{ position:absolute; inset:0; background:rgba(3,5,8,0.72); backdrop-filter:blur(3px); display:none; align-items:flex-end; z-index:50; }
+  .modal-overlay.active{ display:flex; }
+  .modal-sheet{ width:100%; background:var(--surface); border-radius:24px 24px 0 0; padding:26px 26px 34px; border:1px solid var(--border); border-bottom:none; text-align:center; }
+  .modal-title{ font-family:'Space Grotesk'; font-weight:700; font-size:17px; }
+  .modal-sub{ color:var(--muted); font-size:12.5px; margin-top:6px; }
+  .modal-close{ position:absolute; top:16px; right:20px; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+
+  .attempts-warn{ font-size:12px; color:var(--amber); margin-top:10px; }
+  .attempts-warn.danger{ color:var(--danger); font-weight:700; }
+
+  .toast{
+    position:absolute; top:44px; left:50%; transform:translateX(-50%);
+    background:var(--surface-2); border:1px solid var(--border); padding:10px 18px; border-radius:12px;
+    font-size:12.5px; z-index:99; opacity:0; transition:opacity .25s, top .25s; pointer-events:none;
+    display:flex; align-items:center; gap:8px; max-width:80%;
+  }
+  .toast.show{ opacity:1; top:56px; }
+  .toast.danger{ border-color:#5C2226; color:#FFC9CC; background:var(--danger-dim); }
+
+  .empty-hint{ text-align:center; color:var(--muted); font-size:12px; margin-top:60px; padding:0 20px; }
+
+  /* ---------- REELS ---------- */
+  #screen-reels{ padding:0; }
+  .reels-topbar{ display:flex; gap:8px; padding:10px 12px; background:rgba(11,15,20,0.85); position:relative; z-index:3; flex:0 0 auto; }
+  .reels-toggle{ display:flex; gap:6px; flex:0 0 auto; }
+  .rtbtn{ background:var(--surface-2); border:1px solid var(--border); color:var(--muted); font-size:11.5px; font-weight:700; padding:7px 10px; border-radius:10px; cursor:pointer; white-space:nowrap; }
+  .rtbtn.active{ background:var(--mint); color:#06110B; border-color:var(--mint); }
+  .reels-search{ flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-size:12px; padding:7px 10px; border-radius:10px; outline:none; }
+  .video-card{ border-radius:16px; overflow:hidden; margin:0 12px 12px; border:1px solid var(--border); background:var(--surface); cursor:pointer; }
+  .video-card img{ width:100%; display:block; aspect-ratio:16/9; object-fit:cover; background:#000; }
+  .video-card .vc-meta{ padding:10px 12px 12px; }
+  .video-card .vc-title{ font-size:12.5px; font-weight:600; line-height:1.4; }
+  .video-card .vc-channel{ font-size:11px; color:var(--muted); margin-top:4px; }
+  .reels-loading, .reels-empty{ text-align:center; color:var(--muted); font-size:12.5px; padding:30px 20px; }
+  .video-overlay{ display:none; position:fixed; inset:0; background:#000; z-index:50; }
+  .video-overlay.show{ display:flex; flex-direction:column; }
+  .video-close{ position:absolute; top:14px; right:14px; z-index:51; background:rgba(255,255,255,0.15); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; }
+  .video-player-wrap{ flex:1; display:flex; align-items:center; justify-content:center; }
+  .video-player-wrap iframe{ width:100%; }
+  .reels-feed{
+    flex:1 1 auto; min-height:0; width:100%; overflow-y:scroll; scroll-snap-type:y mandatory;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .reels-feed::-webkit-scrollbar{ display:none; }
+  .reel-slide{
+    height:100%; width:100%; scroll-snap-align:start; position:relative;
+    background:linear-gradient(200deg,#1A222D 0%,#0B0F14 55%,#05070A 100%);
+    display:flex; align-items:flex-end; flex-shrink:0;
+  }
+  .reel-slide .playicon{
+    position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:40px; color:rgba(237,242,247,0.18);
+  }
+  .reel-side{
+    position:absolute; right:12px; bottom:110px; display:flex; flex-direction:column; align-items:center; gap:22px;
+  }
+  .reel-side .ricon{ text-align:center; font-size:22px; }
+  .reel-side .ricon span{ display:block; font-size:10px; color:var(--muted); margin-top:3px; font-weight:600; }
+  .reel-info{ padding:0 70px 26px 18px; width:100%; }
+  .reel-info .ruser{ font-weight:700; font-family:'Space Grotesk'; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .reel-info .rcap{ font-size:12.5px; color:#C7D0DA; margin-top:6px; }
+  .reel-info .rtag{ display:inline-block; background:rgba(61,220,151,0.12); color:var(--mint); font-size:10px; padding:3px 9px; border-radius:8px; margin-bottom:8px; font-weight:700; letter-spacing:0.4px; }
+  .ravatar{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#06110B; }
+  .reel-side .ricon{ cursor:pointer; user-select:none; }
+  .reel-side .ricon.liked{ color:var(--danger); }
+  .reel-follow-row{ display:flex; gap:8px; margin-top:12px; }
+  .follow-chip{
+    border:1px solid var(--border); background:rgba(11,15,20,0.55); color:var(--text);
+    font-size:11px; font-weight:700; padding:7px 12px; border-radius:20px; cursor:pointer;
+    display:flex; align-items:center; gap:5px; backdrop-filter:blur(6px);
+  }
+  .follow-chip.kavach.on{ background:var(--mint); color:#06110B; border-color:var(--mint); }
+  .follow-chip.yt{ border-color:#5C1418; color:#FF6B6B; }
+  .comments-sheet{ display:flex; flex-direction:column; max-height:78vh; }
+  .comments-list{ overflow-y:auto; flex:1; margin:10px 0; -ms-overflow-style:none; scrollbar-width:none; }
+  .comments-list::-webkit-scrollbar{ display:none; }
+  .comment-item{ display:flex; gap:10px; padding:9px 2px; border-bottom:1px solid var(--border); text-align:left; }
+  .comment-item .avatar{ width:32px; height:32px; font-size:12px; flex:0 0 auto; }
+  .comment-item .c-body{ flex:1; min-width:0; }
+  .comment-item .c-name{ font-size:12.5px; font-weight:700; }
+  .comment-item .c-text{ font-size:12.5px; color:#C7D0DA; margin-top:2px; word-break:break-word; }
+  .comment-input-row{ display:flex; gap:8px; }
+  .comment-input-row input{ flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:20px; padding:10px 14px; font-size:13px; }
+  .comment-input-row button{ background:var(--mint); color:#06110B; border:none; border-radius:20px; padding:0 16px; font-weight:700; cursor:pointer; }
+
+  /* ---------- STORY CREATOR ---------- */
+  .story-preview{ height:280px; border-radius:18px; background:linear-gradient(160deg,#1A222D,#0B0F14); display:flex; align-items:center; justify-content:center; font-size:56px; margin-top:8px; border:1px solid var(--border); transition:filter .2s; }
+  .filters-row{ display:flex; gap:12px; overflow-x:auto; padding:10px 2px 4px; -ms-overflow-style:none; scrollbar-width:none; }
+  .filters-row::-webkit-scrollbar{ display:none; }
+  .filter-chip{ flex:0 0 auto; text-align:center; cursor:pointer; width:58px; }
+  .filter-thumb{ width:56px; height:56px; border-radius:14px; background:linear-gradient(160deg,#2A5C48,#1A222D); border:2px solid var(--border); }
+  .filter-thumb.active{ border-color:var(--mint); box-shadow:0 0 0 3px rgba(61,220,151,0.15); }
+  .filter-label{ font-size:10px; color:var(--muted); margin-top:5px; }
+  .filter-chip.active .filter-label{ color:var(--mint); font-weight:700; }
+  .song-search-input{ width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-size:13px; padding:11px 14px; border-radius:12px; outline:none; margin-top:14px; }
+
+  /* ---------- SEARCH GRID ---------- */
+  .search-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .search-card{ border-radius:14px; overflow:hidden; background:var(--surface); border:1px solid var(--border); cursor:pointer; }
+  .search-thumb{ height:150px; position:relative; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:26px; color:#06110B; }
+  .search-play{ position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+  .search-locked{ position:absolute; top:8px; left:8px; width:24px; height:24px; border-radius:8px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .search-meta{ padding:9px 10px 11px; }
+  .search-name{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .search-sub{ font-size:11px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .search-section-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); font-weight:700; margin:14px 0 8px; }
+  .search-section-label:first-child{ margin-top:0; }
+
+  /* ===== Auth Gate + Admin Dashboard styles (namespaced under #authGate) ===== */
+  #authGate{ width:100%; }
+  #authGate .wrap { width:430px; max-width:100%; }
+  #authGate /* ---- shared card ---- */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:32px 26px; }
+  #authGate .brand { font-family:'Space Grotesk'; font-weight:700; font-size:22px; text-align:center; }
+  #authGate .brand span { color:var(--mint); }
+  #authGate .gate-sub { color:var(--muted); font-size:13px; margin-top:6px; text-align:center; }
+  #authGate /* ---- auth tabs ---- */
+  .authtabs { display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:4px; margin-top:22px; }
+  #authGate .authtab { flex:1; text-align:center; padding:9px 6px; border-radius:10px; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer; font-family:'Space Grotesk'; }
+  #authGate .authtab.active { background:var(--mint); color:#06110B; }
+  #authGate /* ---- form fields ---- */
+  .field { margin-top:16px; }
+  #authGate .field label { font-size:11.5px; color:var(--muted); font-weight:600; display:block; margin-bottom:6px; }
+  #authGate .field input {
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter'; font-size:13.5px; padding:12px 13px; border-radius:12px; outline:none;
+  }
+  #authGate .field input:focus { border-color:var(--mint-dim); }
+  #authGate .phone-input { display:flex; gap:8px; }
+  #authGate .phone-input .cc { width:60px; flex:0 0 auto; text-align:center; }
+  #authGate .field-err { font-size:11px; color:var(--danger); margin-top:5px; font-weight:600; min-height:14px; }
+  #authGate .btn-primary {
+    background:var(--mint); color:#06110B; border:none; font-weight:700; font-family:'Space Grotesk';
+    padding:13px 20px; border-radius:14px; font-size:14px; cursor:pointer; width:100%; margin-top:18px;
+  }
+  #authGate .btn-primary:active { transform:scale(.98); }
+  #authGate .btn-primary.ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+  #authGate .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+  #authGate .divider { display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--muted); font-size:11px; }
+  #authGate .divider::before, #authGate .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+  #authGate .btn-google {
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter'; font-weight:600; font-size:13px; padding:12px; border-radius:14px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  #authGate .btn-google:active { transform:scale(.98); }
+  #authGate .gicon { width:18px; height:18px; border-radius:50%; background:conic-gradient(#4285F4 0turn .25turn,#34A853 .25turn .5turn,#FBBC05 .5turn .75turn,#EA4335 .75turn 1turn); flex:0 0 auto; }
+  #authGate .link-row { text-align:center; margin-top:14px; font-size:12px; color:var(--muted); }
+  #authGate .link-row a { color:var(--mint); text-decoration:none; font-weight:600; cursor:pointer; }
+  #authGate .gate-warn { font-size:12px; color:var(--danger); min-height:18px; margin-top:6px; font-weight:600; text-align:center; }
+  #authGate .gate-note { font-size:11px; color:var(--muted); margin-top:18px; line-height:1.5; text-align:center; }
+  #authGate /* ---- pin pad (used for admin PIN + OTP entry) ---- */
+  .pindots { display:flex; gap:16px; justify-content:center; margin:22px 0 6px; }
+  #authGate .pindot { width:14px; height:14px; border-radius:50%; border:2px solid var(--border); }
+  #authGate .pindot.filled { background:var(--mint); border-color:var(--mint); }
+  #authGate .pindot.error { background:var(--danger); border-color:var(--danger); }
+  #authGate .numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+  #authGate .numkey { background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-family:'Space Grotesk'; font-size:20px; font-weight:600; height:60px; border-radius:16px; cursor:pointer; }
+  #authGate .numkey:active { transform:scale(.94); }
+  #authGate .numkey.ghost { background:transparent; border:none; }
+  #authGate .otp-target { text-align:center; font-size:12.5px; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px; margin-top:16px; }
+  #authGate .otp-target b { color:var(--mint); }
+  #authGate .otp-demo-banner { margin-top:12px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--amber); background:rgba(242,184,75,.08); border:1px dashed #5C4A22; border-radius:10px; padding:8px; }
+  #authGate .resend { text-align:center; margin-top:12px; font-size:11.5px; color:var(--muted); }
+  #authGate .resend a { color:var(--mint); cursor:pointer; font-weight:600; }
+  #authGate .step-back { background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; margin-bottom:6px; }
+  #authGate /* ---- dashboard ---- */
+  #dash { display:none; background:var(--surface); border:1px solid var(--border); border-radius:24px; overflow:hidden; }
+  #authGate .topbar { padding:18px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+  #authGate .topbar h1 { font-family:'Space Grotesk'; font-size:17px; }
+  #authGate .logout { background:none; border:1px solid var(--border); color:var(--muted); font-size:11px; padding:6px 10px; border-radius:10px; cursor:pointer; }
+  #authGate .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); }
+  #authGate .stat { background:var(--surface); padding:12px 6px; text-align:center; }
+  #authGate .stat .num { font-family:'Space Grotesk'; font-weight:700; font-size:18px; color:var(--mint); }
+  #authGate .stat .lbl { font-size:10.5px; color:var(--muted); margin-top:2px; }
+  #authGate .content { padding:14px 16px 20px; max-height:60vh; overflow-y:auto; }
+  #authGate .urow { display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+  #authGate .avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:14px; color:#06110B; flex:0 0 auto; }
+  #authGate .umain { flex:1; min-width:0; }
+  #authGate .uname { font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:6px; }
+  #authGate .usub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  #authGate .tag { font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:6px; }
+  #authGate .tag.active { color:var(--mint); background:rgba(61,220,151,.1); border:1px solid var(--mint-dim); }
+  #authGate .tag.suspended { color:var(--danger); background:rgba(229,72,77,.1); border:1px solid var(--danger-dim); }
+  #authGate .tag.blocked { color:var(--amber); background:rgba(242,184,75,.12); border:1px solid #5C4A22; }
+  #authGate .tag.tempsuspend { color:var(--amber); background:rgba(242,184,75,.12); border:1px solid #5C4A22; }
+  #authGate .actions { display:flex; gap:6px; flex:0 0 auto; }
+  #authGate .abtn { background:var(--surface-2); border:1px solid var(--border); color:var(--muted); font-size:14px; width:32px; height:32px; border-radius:10px; cursor:pointer; }
+  #authGate .abtn.danger { color:var(--danger); }
+  #authGate .abtn.mint { color:var(--mint); }
+  #authGate .pwdrow { display:flex; align-items:center; gap:6px; margin-top:3px; }
+  #authGate .pwdval { font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--amber); letter-spacing:1px; }
+  #authGate .pwdtoggle { background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; padding:0; }
+  #authGate .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface-2); border:1px solid var(--border); padding:10px 18px; border-radius:12px; font-size:12.5px; opacity:0; transition:.2s; pointer-events:none; max-width:90vw; text-align:center; }
+  #authGate .toast.show { opacity:1; }
+  #recaptcha-container{ position:fixed; bottom:-100px; }
+
+  #authLoading{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; min-height:260px; color:var(--muted); font-size:13px;
+  }
+  .authloading-spinner{
+    width:36px; height:36px; border-radius:50%;
+    border:3px solid var(--border); border-top-color:var(--mint);
+    animation:authspin .8s linear infinite;
+  }
+  @keyframes authspin{ to{ transform:rotate(360deg); } }
+</style>
+
+<!-- ===== Firebase (real backend) ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- ===================== AUTH GATE (Login / Signup / Admin Dashboard) ===================== -->
+<div id="authLoading">
+  <div class="authloading-spinner"></div>
+  <div>Session check हो रहा है...</div>
+</div>
+
+<div id="authGate" style="display:none;">
+  <div class="wrap">
+
+    <div id="authCard" class="card">
+      <div class="brand">Kavach <span>Login</span></div>
+      <div class="gate-sub" id="authSub">Panel में login करें</div>
+
+      <div id="stepChooser">
+        <div class="authtabs">
+          <div class="authtab active" id="tabLogin" onclick="switchAuthTab('login')">Login</div>
+          <div class="authtab" id="tabSignup" onclick="switchAuthTab('signup')">Sign Up</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="aap@example.com">
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <div class="phone-input">
+              <input class="cc" value="+91" disabled>
+              <input type="tel" id="loginPhone" placeholder="10-digit mobile number" maxlength="10">
+            </div>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="loginPin" placeholder="अपना password डालें">
+          </div>
+          <div class="field-err" id="loginErr"></div>
+          <button class="btn-primary" onclick="attemptLogin()">Login</button>
+          <div class="divider">या</div>
+          <button class="btn-google" onclick="googleAuth('login')"><span class="gicon"></span> Google से Continue करें</button>
+          <div class="link-row"><a onclick="goForgot()">Password भूल गए?</a></div>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div id="signupForm" style="display:none;">
+          <div class="authtabs" style="margin-top:16px;">
+            <div class="authtab active" id="roleUserTab" onclick="setSignupRole('user')">User Account</div>
+            <div class="authtab" id="roleAdminTab" onclick="setSignupRole('admin')">Admin Account</div>
+          </div>
+          <div class="field">
+            <label>पूरा नाम</label>
+            <input type="text" id="suName" placeholder="आपका नाम">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="suEmail" placeholder="aap@example.com">
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <div class="phone-input">
+              <input class="cc" value="+91" disabled>
+              <input type="tel" id="suPhone" placeholder="10-digit mobile number" maxlength="10">
+            </div>
+          </div>
+          <div class="field">
+            <label>Password बनाएं</label>
+            <input type="password" id="suPin" placeholder="कम से कम 4 characters का password">
+          </div>
+          <div class="field">
+            <label>App Lock PIN बनाएं (4-digit)</label>
+            <input type="password" id="suLockPin" placeholder="अपना 4-digit lock PIN चुनें" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>App Lock PIN दोबारा डालें</label>
+            <input type="password" id="suLockPinConfirm" placeholder="PIN confirm करें" maxlength="4" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>Verification कैसे करें?</label>
+            <div class="authtabs" style="margin-top:0;">
+              <div class="authtab active" id="verifyEmailTab" onclick="setVerifyMethod('email')">📧 Email OTP</div>
+              <div class="authtab" id="verifyPhoneTab" onclick="setVerifyMethod('phone')">📲 Phone OTP</div>
+            </div>
+          </div>
+          <div class="field-err" id="signupErr"></div>
+          <button class="btn-primary" onclick="startSignupVerification()">Account बनाएं</button>
+          <div class="divider">या</div>
+          <button class="btn-google" onclick="googleAuth('signup')"><span class="gicon"></span> Google से Sign Up करें</button>
+        </div>
+      </div>
+
+      <!-- STEP: real email verification (Firebase sends an actual link) -->
+      <div id="stepEmailVerify" style="display:none;">
+        <button class="step-back" onclick="cancelSignupFlow()">← वापस</button>
+        <div class="otp-target" id="emailVerifyLabel"></div>
+        <div class="otp-demo-banner" id="emailVerifyBanner" style="color:var(--mint);">📧 Real verification link भेज दी गई है — अपना inbox (Spam भी) check करें और link पर click करें।</div>
+        <div class="gate-warn" id="emailVerifyWarn"></div>
+        <button class="btn-primary" onclick="checkEmailVerified()">मैंने Verify कर लिया — Check करें</button>
+        <button class="btn-primary ghost" onclick="resendEmailVerify()">Link दोबारा भेजें</button>
+      </div>
+
+      <!-- STEP: real phone OTP (Firebase SMS, 6-digit) -->
+      <div id="stepOtp" style="display:none;">
+        <button class="step-back" onclick="backToChooser()">← वापस</button>
+        <div class="otp-target" id="otpTargetLabel"></div>
+        <div class="otp-demo-banner" id="otpDemoBanner" style="color:var(--mint);">📲 Real SMS OTP भेजा गया है (Firebase Phone Auth)।</div>
+        <div class="pindots" id="otpDots"></div>
+        <div class="gate-warn" id="otpWarn"></div>
+        <div class="numpad" id="otpNumpad"></div>
+        <div class="resend">OTP नहीं मिला? <a onclick="resendOtp()">दोबारा भेजें</a></div>
+      </div>
+
+      <!-- STEP: forgot-PIN — choose channel -->
+      <div id="stepForgotChoose" style="display:none;">
+        <button class="step-back" onclick="backToChooser()">← वापस</button>
+        <div class="gate-sub" style="margin-top:0;">PIN reset करने के लिए तरीका चुनें</div>
+        <div class="field">
+          <label>Registered Phone Number (real SMS OTP से reset)</label>
+          <div class="phone-input">
+            <input class="cc" value="+91" disabled>
+            <input type="tel" id="fpPhone" placeholder="10-digit mobile number" maxlength="10">
+          </div>
+        </div>
+        <div class="field-err" id="fpErr"></div>
+        <button class="btn-primary" onclick="sendForgotOtp('phone')">Phone पर Real OTP भेजें</button>
+        <div class="divider">या</div>
+        <div class="field">
+          <label>Registered Email (Firebase real reset-link ईमेल पर)</label>
+          <input type="email" id="fpEmail" placeholder="aap@example.com">
+        </div>
+        <button class="btn-primary ghost" onclick="sendForgotOtp('email')">Email पर Reset Link भेजें</button>
+      </div>
+
+      <!-- STEP: set new PIN (after real phone re-verification) -->
+      <div id="stepNewPin" style="display:none;">
+        <div class="gate-sub" style="margin-top:0;">नया PIN सेट करें</div>
+        <div class="field">
+          <label>नया 4-digit PIN</label>
+          <input type="password" id="newPinVal" placeholder="नया PIN" maxlength="4" inputmode="numeric">
+        </div>
+        <div class="field-err" id="newPinErr"></div>
+        <button class="btn-primary" onclick="submitNewPin()">PIN Save करें</button>
+      </div>
+
+      <div class="gate-note">Kavach अब Firebase पर चलता है — accounts, chats-lock demo data असली backend (Auth + Firestore) में save होते हैं। Admin Panel सिर्फ़ उसी email से खुलता है जिसने सबसे पहले "Admin Account" के तौर पर signup किया है।</div>
+    </div>
+
+    <!-- ===================== ADMIN DASHBOARD ===================== -->
+    <div id="dash">
+      <div class="topbar">
+        <h1>👤 Kavachi Control</h1>
+        <button class="logout" onclick="lockPanel()">Lock 🔒</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total Users</div></div>
+        <div class="stat"><div class="num" id="statActive">0</div><div class="lbl">Active</div></div>
+        <div class="stat"><div class="num" id="statSuspended">0</div><div class="lbl">Suspended</div></div>
+        <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Blocked</div></div>
+      </div>
+      <div style="display:flex; gap:8px; padding:10px 16px 0;">
+        <button class="method-btn active" id="dashTabUsers" style="flex:1;" onclick="setDashView('users')">Users</button>
+        <button class="method-btn" id="dashTabTrash" style="flex:1;" onclick="setDashView('trash')">🗑️ Trash (<span id="trashCount">0</span>)</button>
+      </div>
+      <div class="content" id="userList"></div>
+    </div>
+
+  </div>
+  <div class="toast" id="toastAuth"></div>
+</div>
+<div id="recaptcha-container"></div>
+
+<div class="phone" id="phone" style="display:none;">
+
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span>Kavach 🛡</span>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- LOCK SCREEN -->
+  <div class="screen active" id="screen-lock">
+    <div class="lock-top">
+      <div class="shield-wrap">
+        <div class="shield-ring" id="shieldRing"></div>
+        <div class="shield-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="brand">Ka<span>vach</span></div>
+      <div class="lock-sub">आपकी बातचीत, सिर्फ़ आपकी</div>
+      <div class="lock-status" id="lockStatus"></div>
+
+      <div id="lockPinArea">
+        <div class="pindots" id="lockPinDots"></div>
+        <div class="numpad" id="lockNumpad"></div>
+      </div>
+
+      <div id="lockPatternArea" style="display:none;">
+        <div class="pattern-grid" id="lockPatternGrid"></div>
+      </div>
+
+      <div id="lockFaceArea" style="display:none;">
+        <div class="faceid-box">
+          <div class="face-circle" id="faceCircle">🙂</div>
+          <button class="btn-primary" id="faceScanBtn">Face ID से Unlock करें</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lock-methods">
+      <button class="method-btn active" data-m="pin" onclick="setLockMethod('pin')">PIN</button>
+      <button class="method-btn" data-m="pattern" onclick="setLockMethod('pattern')">Pattern</button>
+      <button class="method-btn" data-m="face" onclick="setLockMethod('face')">Face ID</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="topbar">
+      <h1>Kavach</h1>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="lockchip">🛡 Secured</div>
+        <div class="avatar" id="homeProfileBtn" onclick="navigate('profile')" style="width:34px;height:34px;font-size:12px;cursor:pointer;"></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stories-row" id="storiesRow"></div>
+      <div id="feedList"></div>
+    </div>
+  </div>
+
+  <!-- CHATS -->
+  <div class="screen" id="screen-chats">
+    <div class="topbar"><h1>Chats</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content" id="chatsList"></div>
+  </div>
+
+  <!-- GROUPS -->
+  <div class="screen" id="screen-groups">
+    <div class="topbar"><h1>Groups</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content" id="groupsList"></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="screen" id="screen-search">
+    <div class="topbar"><h1>Search</h1><div class="lockchip">🛡 Secured</div></div>
+    <div class="content">
+      <input type="text" id="searchInput" class="msg-input" style="width:100%; margin-bottom:14px;" placeholder="Chats, groups या contacts search करें..." oninput="renderSearch()">
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div class="chatdetail-header">
+      <button class="backbtn" onclick="navigate('profile')">←</button>
+      <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Settings</div>
+    </div>
+    <div class="content">
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="navigate('profile')" style="cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="avatar" id="settingsProfileAvatar" style="width:40px;height:40px;font-size:14px;"></div>
+              <div><span id="settingsProfileName"></span><div class="desc">Profile, bio और birthday देखें</div></div>
+            </div>
+            <span>→</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">App Lock</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Lock Method<div class="desc" id="lockMethodDesc">PIN</div></div><span id="lockMethodVal">PIN</span></div>
+          <div class="settings-row"><div>App PIN बदलें<div class="desc">4-digit code</div></div><button class="method-btn" onclick="openChangeAppPin()">बदलें</button></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Chat Locks</div>
+        <div class="settings-card" id="lockedChatsSummary"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">सुरक्षा नियम</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Auto-delete on wrong PIN<div class="desc">किसी locked chat पर 5 गलत PIN = chat delete</div></div><span style="color:var(--mint);font-weight:700;">ON</span></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">App Permissions</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>📷 Camera</div><button class="method-btn" id="settPermCameraBtn" onclick="requestPermission('camera')">Allow</button></div>
+          <div class="settings-row"><div>🎤 Microphone</div><button class="method-btn" id="settPermMicBtn" onclick="requestPermission('microphone')">Allow</button></div>
+          <div class="settings-row"><div>🖼️ Gallery</div><button class="method-btn" id="settPermGalleryBtn" onclick="requestPermission('gallery')">Allow</button></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Email</div>
+        <div class="settings-card">
+          <div class="settings-row"><div>Email<div class="desc" id="settEmailCurrent"></div></div><button class="method-btn" onclick="openChangeEmail()">बदलें</button></div>
+          <div class="settings-row"><div class="desc">Email हर 7 दिन में सिर्फ़ एक बार बदल सकते हैं</div></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="logoutToAuth()" style="cursor:pointer;"><div style="color:var(--danger); font-weight:700;">Logout</div><span>→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT DETAIL -->
+  <div class="screen" id="screen-chatdetail">
+    <div class="content">
+      <div class="chatdetail-header">
+        <button class="backbtn" onclick="navigate('chats')">←</button>
+        <div class="avatar" id="cdAvatar" style="width:38px;height:38px;font-size:13px;"></div>
+        <div style="flex:1;">
+          <div style="font-weight:700; font-size:14px;" id="cdName"></div>
+          <div style="font-size:11px; color:var(--muted);" id="cdStatus">online</div>
+        </div>
+        <button class="lock-btn" onclick="callFromChat('audio')" title="Audio call">📞</button>
+        <button class="lock-btn" onclick="callFromChat('video')" title="Video call">🎥</button>
+        <button class="lock-btn" id="cdLockBtn" onclick="toggleLockFromDetail()">🔓</button>
+      </div>
+      <div class="msgs" id="cdMsgs"></div>
+      <div class="msg-input-row">
+        <input class="msg-input" id="cdInput" placeholder="Message लिखें...">
+        <button class="sendbtn" onclick="sendDemoMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REELS (full-screen vertical, real YouTube) -->
+  <div class="screen" id="screen-reels">
+    <div class="reels-topbar">
+      <div class="reels-toggle">
+        <button class="rtbtn active" id="rtShorts" onclick="setReelsMode('shorts')">🎬 Shorts</button>
+        <button class="rtbtn" id="rtVideos" onclick="setReelsMode('videos')">📺 Videos</button>
+      </div>
+      <input class="reels-search" id="reelsSearch" placeholder="YouTube पर खोजें..." onkeydown="if(event.key==='Enter')searchReels()">
+    </div>
+    <div class="reels-feed" id="reelsFeed"></div>
+    <div class="video-overlay" id="videoOverlay">
+      <button class="video-close" onclick="closeVideoPlayer()">✕</button>
+      <div class="video-player-wrap" id="videoPlayerWrap"></div>
+    </div>
+  </div>
+
+  <!-- REEL COMMENTS OVERLAY -->
+  <div class="modal-overlay" id="reelCommentsOverlay">
+    <div class="modal-sheet comments-sheet" style="text-align:left; position:relative;">
+      <button class="modal-close" onclick="closeReelComments()">✕</button>
+      <div class="modal-title">💬 Comments</div>
+      <div class="comments-list" id="reelCommentsList"></div>
+      <div class="comment-input-row">
+        <input type="text" id="reelCommentInput" placeholder="Comment लिखें..." onkeydown="if(event.key==='Enter')submitReelComment()">
+        <button onclick="submitReelComment()">भेजें</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- STORY CREATE -->
+  <div class="screen" id="screen-storycreate">
+    <div class="content" style="padding:14px 16px 30px;">
+      <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
+        <button class="backbtn" onclick="navigate('home')">←</button>
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Story बनाएं</div>
+        <button class="btn-primary" style="width:auto; padding:9px 18px;" onclick="postStory()">Post</button>
+      </div>
+
+      <div class="story-preview" id="storyPreview">✨</div>
+
+      <div class="settings-label" style="margin-top:16px;">Filters</div>
+      <div class="filters-row" id="filtersRow"></div>
+
+      <input class="msg-input" id="storyCaption" style="width:100%; margin-top:10px;" placeholder="Caption लिखें..." oninput="state.storyDraft.caption=this.value">
+
+      <div class="settings-label" style="margin-top:18px;">Song</div>
+      <div class="settings-card" id="songRowWrap"></div>
+
+      <div class="settings-label" style="margin-top:18px;">Kisse Hide karni hai</div>
+      <div class="settings-card" id="hideRowWrap"></div>
+    </div>
+  </div>
+
+  <!-- SONG SEARCH OVERLAY -->
+  <div class="modal-overlay" id="songSearchOverlay">
+    <div class="modal-sheet" style="text-align:left; max-height:82vh; overflow-y:auto; position:relative;">
+      <button class="modal-close" onclick="closeSongSearch()">✕</button>
+      <div class="modal-title">🎵 Song खोजें</div>
+      <div class="modal-sub">YouTube से कोई भी song search करें और story में add करें</div>
+      <input type="text" class="song-search-input" id="songSearchInput" placeholder="Song या artist का नाम लिखें..." onkeydown="if(event.key==='Enter')searchSongs()">
+      <div id="songResults" style="margin-top:12px;">
+        <div class="empty-hint">Song खोजने के लिए टाइप करके Enter दबाएं</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDE-FROM SEARCH OVERLAY -->
+  <div class="modal-overlay" id="hideSearchOverlay">
+    <div class="modal-sheet" style="text-align:left; max-height:82vh; overflow-y:auto; position:relative;">
+      <button class="modal-close" onclick="closeHideSearch()">✕</button>
+      <div class="modal-title">👁 किससे Story Hide करें</div>
+      <div class="modal-sub">चुने गए contacts को यह story नहीं दिखेगी</div>
+      <input type="text" class="song-search-input" id="hideSearchInput" placeholder="Contact search करें..." oninput="renderHideResults()">
+      <div id="hideResults" style="margin-top:12px;"></div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="closeHideSearch()">Done</button>
+    </div>
+  </div>
+
+  <!-- OTHER USER PROFILE (view + follow/unfollow) -->
+  <div class="screen" id="screen-otherprofile">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
+        <button class="backbtn" onclick="navigate(state.otherProfileBackTo || 'home')">←</button>
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Profile</div>
+      </div>
+
+      <div style="text-align:center; margin-top:6px;">
+        <div class="avatar" id="opAvatar" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
+        <div id="opName" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
+        <div id="opFollowers" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
+        <div style="display:flex; gap:10px; margin-top:16px; justify-content:center;">
+          <button class="btn-primary" id="opFollowBtn" style="width:auto; padding:10px 30px;" onclick="toggleFollow()">Follow</button>
+          <button class="method-btn" id="opMessageBtn" style="width:auto; padding:10px 22px; flex:none;" onclick="messageUser()">💬 Message</button>
+        </div>
+      </div>
+
+      <div class="settings-section" style="margin-top:24px;">
+        <div class="settings-label">Bio</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="opBio" style="font-size:13.5px; line-height:1.5;"></div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Birthday</div>
+        <div class="settings-card" style="padding:14px 16px; display:flex; align-items:center; gap:8px; font-size:13.5px;">
+          🎂 <span id="opBday"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="screen-profile">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:none; margin-bottom:0;">
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Profile</div>
+        <button class="lock-btn" id="notifBtn" onclick="navigate('notifications')" title="Notifications" style="font-size:19px; position:relative;">
+          🔔<span id="notifBadge" style="display:none; position:absolute; top:2px; right:2px; min-width:15px; height:15px; padding:0 3px; border-radius:8px; background:var(--danger); color:#fff; font-size:9px; font-weight:700; align-items:center; justify-content:center;"></span>
+        </button>
+        <button class="method-btn" id="profileEditBtn" onclick="toggleProfileEdit()">Edit</button>
+        <button class="lock-btn" onclick="navigate('settings')" title="Settings" style="font-size:19px;">⚙️</button>
+      </div>
+
+      <div style="text-align:center; margin-top:6px;">
+        <div class="avatar" id="profileAvatarBig" style="width:88px;height:88px;font-size:28px;margin:10px auto 12px;"></div>
+        <div id="profileNameView" style="font-family:'Space Grotesk'; font-weight:700; font-size:19px;"></div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">🛡 End-to-end secured profile</div>
+      </div>
+
+      <div class="settings-section" style="margin-top:22px;">
+        <div class="settings-label">Bio</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="bioView" style="font-size:13.5px; line-height:1.5; color:var(--text);"></div>
+          <textarea id="bioEdit" maxlength="150" rows="3" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13.5px; padding:10px; resize:none;"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Birthday</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="bdayView" style="font-size:13.5px; display:flex; align-items:center; gap:8px;">🎂 <span id="bdayViewText"></span></div>
+          <input type="date" id="bdayEdit" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13px; padding:10px;">
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Username</div>
+        <div class="settings-card" style="padding:14px 16px;">
+          <div id="nameView" style="font-size:13.5px;"></div>
+          <input type="text" id="nameEdit" maxlength="30" style="display:none; width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Inter'; font-size:13.5px; padding:10px;">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="profileSaveBtn" style="display:none; margin-top:6px;" onclick="saveProfile()">Save Profile</button>
+
+      <div class="settings-section" style="margin-top:22px;">
+        <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>My Stories</span>
+          <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openStoryCreator()">+ Story</button>
+        </div>
+        <div class="search-grid" id="myStoriesGrid"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>My Reels</span>
+          <button class="method-btn" style="padding:5px 12px; flex:none;" onclick="openReelCreator()">+ Reel</button>
+        </div>
+        <div class="search-grid" id="myReelsGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="screen" id="screen-notifications">
+    <div class="content">
+      <div class="chatdetail-header" style="border-bottom:1px solid var(--border); margin-bottom:12px;">
+        <button class="backbtn" onclick="navigate('profile')">←</button>
+        <div style="flex:1; font-family:'Space Grotesk'; font-weight:700; font-size:16px;">Notifications</div>
+      </div>
+      <div id="notifList"></div>
+    </div>
+  </div>
+
+  <!-- CALL SCREEN -->
+  <div class="screen" id="screen-call">
+    <div class="content" id="callWaitingUI">
+      <div class="call-avatar-big" id="callAvatar"></div>
+      <div class="call-name" id="callName"></div>
+      <div class="call-status" id="callStatusTxt">Calling…</div>
+      <div class="call-controls">
+        <button class="ctrlbtn" id="muteBtn" onclick="toggleMute()">🎙️</button>
+        <button class="ctrlbtn end" onclick="hangupCall()">📵</button>
+      </div>
+    </div>
+    <div id="callMediaContainer" style="display:none; position:absolute; inset:0; background:#000;">
+      <video id="remoteMedia" autoplay playsinline style="width:100%; height:100%; object-fit:cover; background:#000;"></video>
+      <video id="localVideo" autoplay playsinline muted style="display:none; position:absolute; width:100px; height:140px; bottom:120px; right:14px; border-radius:14px; border:2px solid #fff; object-fit:cover;"></video>
+      <div class="call-controls" style="position:absolute; bottom:34px; left:50%; transform:translateX(-50%);">
+        <button class="ctrlbtn" id="muteBtnVideo" onclick="toggleMute()">🎙️</button>
+        <button class="ctrlbtn end" onclick="hangupCall()">📵</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Incoming Call -->
+  <div class="modal-overlay" id="incomingCallOverlay">
+    <div class="modal-sheet" style="text-align:center;">
+      <div class="call-avatar-big" id="incomingCallAvatar" style="margin:0 auto 14px;"></div>
+      <div class="modal-title" id="incomingCallName"></div>
+      <div class="modal-sub" id="incomingCallType">Incoming audio call…</div>
+      <div style="display:flex; gap:14px; margin-top:26px;">
+        <button class="btn-primary" style="background:var(--danger); flex:1;" onclick="declineIncomingCall()">✕ Decline</button>
+        <button class="btn-primary" style="flex:1;" onclick="acceptIncomingCall()">📞 Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav" id="bottomnav" style="display:none;">
+    <button class="navbtn active" data-s="home" onclick="navigate('home')">🏠<span>Home</span></button>
+    <button class="navbtn" data-s="reels" onclick="navigate('reels')">🎬<span>Reels</span></button>
+    <button class="navbtn" data-s="chats" onclick="navigate('chats')">💬<span>Chats</span></button>
+    <button class="navbtn" data-s="reels" onclick="navigate('reels')">📺<span>YouTube</span></button>
+    <button class="navbtn" data-s="search" onclick="navigate('search')">🔍<span>Search</span></button>
+    <button class="navbtn" data-s="profile" onclick="navigate('profile')">👤<span>Profile</span></button>
+  </div>
+
+  <!-- MODAL: PIN entry for chat lock / set / change -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-title" id="modalTitle">PIN डालें</div>
+      <div class="modal-sub" id="modalSub">यह chat lock है</div>
+      <div class="pindots" id="modalPinDots" style="margin-top:22px;"></div>
+      <div class="attempts-warn" id="modalWarn"></div>
+      <div class="numpad" id="modalNumpad" style="margin-top:24px;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Reel Creator -->
+  <div class="modal-overlay" id="reelCreatorOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeReelCreator()">✕</button>
+      <div class="modal-title">Reel बनाएं</div>
+      <div class="modal-sub">Source चुनें और caption डालें</div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button class="method-btn" id="reelSrcCameraBtn" style="flex:1;" onclick="pickReelSource('camera')">📷 Camera</button>
+        <button class="method-btn" id="reelSrcGalleryBtn" style="flex:1;" onclick="pickReelSource('gallery')">🖼️ Gallery</button>
+      </div>
+      <div class="desc" id="reelSourceStatus" style="margin-top:8px; min-height:14px;"></div>
+      <input type="text" class="song-search-input" id="reelCaptionInput" placeholder="Caption लिखें...">
+      <button class="btn-primary" style="margin-top:16px;" onclick="submitReel()">Reel Post करें</button>
+    </div>
+  </div>
+
+  <!-- MODAL: App Permissions -->
+  <div class="modal-overlay" id="permissionsOverlay">
+    <div class="modal-sheet">
+      <div class="modal-title">App Permissions चाहिए</div>
+      <div class="modal-sub">Story/Reel बनाने के लिए इन्हें allow करें</div>
+      <div class="settings-card" style="margin-top:14px; text-align:left;">
+        <div class="settings-row"><div>📷 Camera<div class="desc">Photo/Video capture के लिए</div></div><button class="method-btn" id="permCameraBtn" onclick="requestPermission('camera')">Allow</button></div>
+        <div class="settings-row"><div>🎤 Microphone<div class="desc">Voice/Video sound के लिए</div></div><button class="method-btn" id="permMicBtn" onclick="requestPermission('microphone')">Allow</button></div>
+        <div class="settings-row"><div>🖼️ Gallery<div class="desc">Photos/Videos upload के लिए</div></div><button class="method-btn" id="permGalleryBtn" onclick="requestPermission('gallery')">Allow</button></div>
+      </div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="closePermissionsPrompt()">Continue</button>
+    </div>
+  </div>
+
+  <!-- MODAL: Change Email -->
+  <div class="modal-overlay" id="emailChangeOverlay">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeChangeEmail()">✕</button>
+      <div class="modal-title">Email बदलें</div>
+      <div class="modal-sub" id="emailChangeSub">नया email address डालें</div>
+      <input type="email" class="song-search-input" id="newEmailInput" placeholder="नया email...">
+      <div style="color:var(--danger); font-size:11px; font-weight:600; min-height:14px; margin-top:6px;" id="emailChangeErr"></div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="submitEmailChange()">Email Update करें</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   FIREBASE INIT — real backend (Auth + Firestore)
+   Console setup required (see SETUP.md shipped alongside this file):
+     1) Authentication → Sign-in method → enable Email/Password, Phone, Google
+     2) Authentication → Settings → Authorized domains → add the domain this
+        file is actually hosted on (Google popup + reCAPTCHA fail otherwise)
+     3) Phone Auth needs the Blaze (pay-as-you-go) billing plan for real SMS
+        to arbitrary numbers (Spark/free plan only works with pre-added
+        test numbers in the console)
+     4) Firestore Database → create database, then set rules (see SETUP.md)
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDkK0ZsGCUQ_q3suTgoEiqehujJpxW9tsg",
+  authDomain: "kavach-86f4a.firebaseapp.com",
+  projectId: "kavach-86f4a",
+  storageBucket: "kavach-86f4a.firebasestorage.app",
+  messagingSenderId: "441192498957",
+  appId: "1:441192498957:web:a6c3045d90c4f5aaf55244",
+  measurementId: "G-XRN84FJP6L"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* 4-digit PIN -> Firebase password (Firebase requires >=6 chars) */
+function pinToPassword(pin){ return 'kv_' + pin + '_pin'; }
+
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function isValidPhone(v){ return /^[6-9]\d{9}$/.test(v); }
+
+let signupRole = 'user';
+let otpState = { mode:null, pendingSignup:null, verificationId:null, forgotConfirmation:null, input:'' };
+let users = []; // populated live from Firestore when Admin dashboard opens
+
+function atoast(msg, danger){
+  const t = document.getElementById('toastAuth');
+  t.textContent = msg;
+  t.className = 'toast show' + (danger ? ' danger' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className='toast'; }, 2800);
+}
+
+/* ---------------- TAB / STEP SWITCHING ---------------- */
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = tab==='signup' ? 'block' : 'none';
+}
+function setSignupRole(role){
+  signupRole = role;
+  document.getElementById('roleUserTab').classList.toggle('active', role==='user');
+  document.getElementById('roleAdminTab').classList.toggle('active', role==='admin');
+}
+let signupVerifyMethod = 'email';
+function setVerifyMethod(m){
+  signupVerifyMethod = m;
+  document.getElementById('verifyEmailTab').classList.toggle('active', m==='email');
+  document.getElementById('verifyPhoneTab').classList.toggle('active', m==='phone');
+}
+function showStep(step){
+  ['stepChooser','stepEmailVerify','stepOtp','stepForgotChoose','stepNewPin'].forEach(id=>{
+    document.getElementById(id).style.display = (id===step) ? 'block' : 'none';
+  });
+}
+function backToChooser(){
+  showStep('stepChooser');
+  document.getElementById('loginErr').textContent='';
+  document.getElementById('signupErr').textContent='';
+}
+function cancelSignupFlow(){
+  if(auth.currentUser && !auth.currentUser.emailVerified){ auth.signOut(); }
+  backToChooser();
+}
+
+/* ---------------- reCAPTCHA (required by Firebase Phone Auth) ---------------- */
+function ensureRecaptcha(){
+  if(!window._recaptchaVerifier){
+    window._recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size:'invisible' }, auth);
+  }
+  return window._recaptchaVerifier;
+}
+
+/* ---------------- LOGIN ---------------- */
+function attemptLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pin = document.getElementById('loginPin').value.trim();
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+
+  if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+  if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+  if(pin.length<4){ err.textContent='⚠️ Password डालें'; return; }
+
+  atoast('🔐 Login हो रहा है...');
+  auth.signInWithEmailAndPassword(email, pinToPassword(pin)).then(async cred=>{
+    const snap = await db.collection('accounts').doc(cred.user.uid).get();
+    if(!snap.exists){ err.textContent='⚠️ Account का data नहीं मिला (Firestore)'; auth.signOut(); return; }
+    const data = snap.data();
+    if(data.phone && data.phone !== phone){ err.textContent='⚠️ Phone number match नहीं हुआ'; auth.signOut(); return; }
+    if(data.role !== 'admin'){
+      const statusCheck = await checkAccountStatus(cred.user.uid, data);
+      if(!statusCheck.ok){ err.textContent = statusCheck.message; auth.signOut(); return; }
+      data.status = statusCheck.data.status;
+    }
+    if(data.role === 'admin'){ enterDashboard(); }
+    else { enterUserApp(data); }
+  }).catch(err2=>{
+    err.textContent = '❌ ' + (err2.message || 'Login fail हुआ');
+  });
+}
+
+/* checks block/suspend status; auto-reactivates an expired temporary suspension */
+async function checkAccountStatus(uid, data){
+  if(data.trashed){
+    return { ok:false, message:'⛔ यह account delete कर दिया गया है — admin से contact करें', data };
+  }
+  if(data.status === 'blocked'){
+    return { ok:false, message:'⛔ यह account block कर दिया गया है — admin से contact करें', data };
+  }
+  if(data.status === 'suspended'){
+    if(data.suspendUntil && data.suspendUntil <= Date.now()){
+      await db.collection('accounts').doc(uid).set({ status:'active', suspendUntil:null }, { merge:true });
+      data.status = 'active'; data.suspendUntil = null;
+      return { ok:true, data };
+    }
+    const remain = data.suspendUntil ? fmtSuspendRemaining(data.suspendUntil) : 'अनिश्चित समय';
+    return { ok:false, message:`⏳ यह account suspend है (${remain}) — admin से contact करें`, data };
+  }
+  return { ok:true, data };
+}
+
+function explainAuthError(err){
+  const code = err && err.code;
+  const map = {
+    'auth/unauthorized-domain': 'यह domain Firebase Console में authorized नहीं है। Authentication → Settings → Authorized domains में इसे add करें (localhost/यह hosting domain)।',
+    'auth/operation-not-allowed': 'यह sign-in method Firebase Console में OFF है। Authentication → Sign-in method में Google/Email/Phone ON करें।',
+    'auth/popup-blocked': 'Browser ने popup block कर दिया — redirect तरीके से दोबारा कोशिश हो रही है...',
+    'auth/popup-closed-by-user': 'Popup बंद हो गया, दोबारा try करें।',
+    'auth/cancelled-popup-request': 'दोबारा try करें।',
+    'auth/network-request-failed': 'Internet connection check करें।',
+    'auth/invalid-api-key': 'Firebase API key गलत/expired है — firebaseConfig दोबारा check करें।',
+    'auth/api-key-not-valid': 'Firebase API key गलत/expired है — firebaseConfig दोबारा check करें।'
+  };
+  return (map[code] ? map[code] : (err && err.message) || 'कुछ गलत हो गया') + (code ? ' ['+code+']' : '');
+}
+
+async function finishGoogleSignIn(user, mode){
+  const ref = db.collection('accounts').doc(user.uid);
+  const snap = await ref.get();
+  let data;
+  if(!snap.exists){
+    if(mode==='signup' && signupRole!=='admin'){
+      const deviceCheck = checkDeviceSignupAllowed(user.email||'');
+      if(!deviceCheck.ok){ auth.signOut(); atoast('❌ ' + deviceCheck.message, true); return; }
+    }
+    const role = (mode==='signup' && signupRole==='admin') ? 'admin' : 'user';
+    data = { name:user.displayName||'Google User', email:user.email||'', phone:'', role, provider:'google',
+      permissionsAsked:false, permissions:{camera:null, microphone:null, gallery:null}, lastEmailChangeAt:null,
+      status:'active', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    await ref.set(data);
+    if(role!=='admin') markDeviceSignedUp(user.email||'');
+  } else {
+    data = snap.data();
+  }
+  if(data.role !== 'admin'){
+    const statusCheck = await checkAccountStatus(user.uid, data);
+    if(!statusCheck.ok){ auth.signOut(); atoast('❌ ' + statusCheck.message, true); return; }
+    data.status = statusCheck.data.status;
+  }
+  atoast(mode==='signup' ? '✅ Google से account बन गया' : '✅ Google से login हो गया');
+  if(data.role === 'admin'){ enterDashboard(); } else { enterUserApp(data); }
+}
+
+function googleAuth(mode){
+  window._pendingGoogleMode = mode;
+  const btns = document.querySelectorAll('.btn-google');
+  btns.forEach(b=>{ b.disabled = true; b.dataset.origText = b.dataset.origText || b.innerHTML; b.innerHTML = '<span class="gicon"></span> कनेक्ट हो रहा है...'; });
+  const provider = new firebase.auth.GoogleAuthProvider();
+  atoast('🔵 Google से sign-in हो रहा है...');
+  auth.signInWithPopup(provider).then(result=>{
+    finishGoogleSignIn(result.user, mode);
+  }).catch(err=>{
+    if(err && (err.code==='auth/popup-blocked' || err.code==='auth/operation-not-supported-in-this-environment' || err.code==='auth/popup-closed-by-user')){
+      atoast('🔵 Popup तरीका काम नहीं कर रहा — redirect से कोशिश हो रही है...');
+      auth.signInWithRedirect(provider).catch(err2=>{
+        atoast('❌ ' + explainAuthError(err2), true);
+      });
+      return; // page will navigate away; result handled by getRedirectResult() on reload
+    }
+    atoast('❌ ' + explainAuthError(err), true);
+  }).finally(()=>{
+    btns.forEach(b=>{ b.disabled = false; if(b.dataset.origText) b.innerHTML = b.dataset.origText; });
+  });
+}
+
+/* handle the case where signInWithPopup fell back to signInWithRedirect */
+auth.getRedirectResult().then(result=>{
+  if(result && result.user){
+    finishGoogleSignIn(result.user, window._pendingGoogleMode || 'login');
+  }
+}).catch(err=>{
+  if(err && err.code) atoast('❌ ' + explainAuthError(err), true);
+});
+
+function enterDashboard(){
+  document.getElementById('authCard').style.display='none';
+  document.getElementById('dash').style.display='block';
+  loadUsersFromFirestore();
+}
+
+function lockPanel(){
+  if(auth.currentUser){ auth.signOut(); }
+  document.getElementById('authCard').style.display='block';
+  document.getElementById('dash').style.display='none';
+  backToChooser();
+  switchAuthTab('login');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPin').value='';
+  document.getElementById('loginErr').textContent='';
+}
+
+function enterUserApp(accountData){
+  document.getElementById('authGate').style.display='none';
+  document.getElementById('phone').style.display='flex';
+  if(accountData && accountData.name){
+    state.profile.name = accountData.name;
+  }
+  state.profile.email = accountData ? (accountData.email || '') : '';
+  state.lastEmailChangeAt = accountData ? (accountData.lastEmailChangeAt || null) : null;
+  state.permissions = (accountData && accountData.permissions) ? accountData.permissions : {camera:null, microphone:null, gallery:null};
+  state.needsPermissionsPrompt = !(accountData && accountData.permissionsAsked);
+  state.appPin = (accountData && accountData.appLockPin) ? accountData.appLockPin : null;
+  state.settingFirstLockPin = false;
+  state.newLockPinStage = null;
+  setLockMethod('pin');
+  loadDirectoryUsers();
+  if(typeof subscribeChats === 'function') subscribeChats();
+  if(typeof subscribeIncomingCalls === 'function') subscribeIncomingCalls();
+}
+
+function logoutToAuth(){
+  if(auth.currentUser){ auth.signOut(); }
+  if(typeof _chatsUnsub !== 'undefined' && _chatsUnsub){ _chatsUnsub(); _chatsUnsub = null; }
+  if(typeof _incomingCallsUnsub !== 'undefined' && _incomingCallsUnsub){ _incomingCallsUnsub(); _incomingCallsUnsub = null; }
+  if(typeof _msgsUnsub !== 'undefined' && _msgsUnsub){ _msgsUnsub(); _msgsUnsub = null; }
+  document.getElementById('phone').style.display='none';
+  document.getElementById('authGate').style.display='block';
+  backToChooser();
+  switchAuthTab('login');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPin').value='';
+  navigate('lock');
+}
+
+/* ---------------- SESSION RESTORE ON PAGE REFRESH ----------------
+   Firebase khud login-session ko browser mein save rakhta hai, lekin
+   isse pehle page refresh hone par seedha login screen dikha diya jaata
+   tha chahe user pehle se logged-in ho. Yeh listener page load hote hi
+   ek baar check karta hai ki koi valid session hai ya nahi, aur agar hai
+   to seedha app/dashboard khol deta hai — login screen dikhata hi nahi. */
+let _authRestoreDone = false;
+function hideAuthLoading(){
+  const el = document.getElementById('authLoading');
+  if(el) el.style.display = 'none';
+}
+auth.onAuthStateChanged(async (user)=>{
+  if(_authRestoreDone) return; // sirf pehli baar (page-load) hi restore karo
+  _authRestoreDone = true;
+
+  if(!user){
+    hideAuthLoading();
+    document.getElementById('authGate').style.display='block';
+    return;
+  }
+
+  try{
+    const snap = await db.collection('accounts').doc(user.uid).get();
+    if(!snap.exists){
+      hideAuthLoading();
+      document.getElementById('authGate').style.display='block';
+      return;
+    }
+    const data = snap.data();
+    if(data.role !== 'admin'){
+      const statusCheck = await checkAccountStatus(user.uid, data);
+      if(!statusCheck.ok){
+        auth.signOut();
+        hideAuthLoading();
+        document.getElementById('authGate').style.display='block';
+        atoast('❌ ' + statusCheck.message, true);
+        return;
+      }
+      data.status = statusCheck.data.status;
+    }
+    hideAuthLoading();
+    if(data.role === 'admin'){
+      document.getElementById('authGate').style.display='block';
+      enterDashboard();
+    } else {
+      enterUserApp(data);
+    }
+  }catch(e){
+    hideAuthLoading();
+    document.getElementById('authGate').style.display='block';
+    atoast('❌ Session restore fail हुआ: ' + e.message, true);
+  }
+});
+
+const DEVICE_SIGNUP_KEY = 'kavach_device_email';
+function checkDeviceSignupAllowed(email){
+  const existing = localStorage.getItem(DEVICE_SIGNUP_KEY);
+  if(existing && existing.toLowerCase() !== email.toLowerCase()){
+    return { ok:false, message:`इस device पर पहले से "${existing}" से account बन चुका है — सिर्फ़ एक account allowed है। उसी email से Login करें।` };
+  }
+  return { ok:true };
+}
+function markDeviceSignedUp(email){
+  if(email) localStorage.setItem(DEVICE_SIGNUP_KEY, email);
+}
+
+/* ---------------- SIGNUP: step 1 — create real Firebase account ---------------- */
+async function startSignupVerification(){
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const phone = document.getElementById('suPhone').value.trim();
+  const pin = document.getElementById('suPin').value.trim();
+  const lockPin = document.getElementById('suLockPin').value.trim();
+  const lockPinConfirm = document.getElementById('suLockPinConfirm').value.trim();
+  const err = document.getElementById('signupErr');
+  err.textContent = '';
+
+  if(!name){ err.textContent='⚠️ नाम डालें'; return; }
+  if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+  if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+  if(pin.length<4){ err.textContent='⚠️ कम से कम 4 characters का password बनाएं'; return; }
+  if(!/^\d{4}$/.test(lockPin)){ err.textContent='⚠️ App Lock PIN 4 digits का होना चाहिए'; return; }
+  if(lockPin !== lockPinConfirm){ err.textContent='⚠️ App Lock PIN दोनों बार same नहीं है'; return; }
+
+  if(signupRole !== 'admin'){
+    const deviceCheck = checkDeviceSignupAllowed(email);
+    if(!deviceCheck.ok){ err.textContent = '⚠️ ' + deviceCheck.message; return; }
+  } else {
+    // ---- Admin single-email lock: sirf ek hi email admin ban sakta hai. ----
+    // Ek baar admin account ban jaaye, uske baad koi bhi doosri email admin
+    // ke roop mein signup nahi kar sakti (verified admin already exist karta hai).
+    err.textContent = 'Admin account check हो रहा है...';
+    try{
+      const existingAdmins = await db.collection('accounts').where('role','==','admin').limit(1).get();
+      if(!existingAdmins.empty){
+        err.textContent = '⚠️ Admin account पहले से बन चुका है — सिर्फ़ एक ही Admin allowed है। उस email से login करें।';
+        return;
+      }
+    }catch(e){
+      err.textContent = '⚠️ Admin check fail हुआ: ' + e.message;
+      return;
+    }
+    err.textContent = '';
+  }
+
+  otpState.pendingSignup = { name, email, phone, pin, appLockPin: lockPin, role: signupRole, verifyMethod: signupVerifyMethod };
+  atoast('⏳ Account बनाया जा रहा है...');
+  auth.createUserWithEmailAndPassword(email, pinToPassword(pin)).then(cred=>{
+    if(signupVerifyMethod === 'phone'){
+      // Phone OTP चुना गया — email-link step skip करके सीधा phone OTP भेजो
+      beginPhoneOtp();
+      return;
+    }
+    return cred.user.sendEmailVerification().then(()=>{
+      document.getElementById('emailVerifyLabel').innerHTML = '<b>'+email+'</b> पर real verification link भेज दी गई है';
+      document.getElementById('emailVerifyWarn').textContent = '';
+      showStep('stepEmailVerify');
+    });
+  }).catch(e=>{
+    err.textContent = '❌ ' + (e.message || 'Signup fail हुआ');
+  });
+}
+
+function resendEmailVerify(){
+  if(!auth.currentUser){ return; }
+  auth.currentUser.sendEmailVerification().then(()=>{
+    atoast('📧 Link दोबारा भेज दी गई');
+  }).catch(e=>{
+    document.getElementById('emailVerifyWarn').textContent = '❌ ' + e.message;
+  });
+}
+
+function checkEmailVerified(){
+  if(!auth.currentUser){ document.getElementById('emailVerifyWarn').textContent='⚠️ Session नहीं मिला, दोबारा शुरू करें'; return; }
+  document.getElementById('emailVerifyWarn').textContent = 'Check हो रहा है...';
+  auth.currentUser.reload().then(()=>{
+    if(auth.currentUser.emailVerified){
+      document.getElementById('emailVerifyWarn').textContent = '';
+      // Email OTP method चुना गया था — phone OTP की ज़रूरत नहीं, seedha account finalize karo
+      finalizeSignup();
+    } else {
+      document.getElementById('emailVerifyWarn').textContent = '⚠️ अभी तक verify नहीं हुआ — पहले email में link पर click करें';
+    }
+  });
+}
+
+/* ---------------- SIGNUP: step 2 — real SMS OTP, then link to account ---------------- */
+function beginPhoneOtp(){
+  const phone = otpState.pendingSignup.phone;
+  document.getElementById('otpTargetLabel').innerHTML = 'Phone verification — <b>+91 '+phone+'</b> पर SMS OTP भेजा जा रहा है...';
+  document.getElementById('otpWarn').textContent = '';
+  otpState.input = '';
+  showStep('stepOtp');
+  const provider = new firebase.auth.PhoneAuthProvider(auth);
+  provider.verifyPhoneNumber('+91'+phone, ensureRecaptcha()).then(verificationId=>{
+    otpState.verificationId = verificationId;
+    otpState.mode = 'signup-phone';
+    document.getElementById('otpTargetLabel').innerHTML = 'Phone verification — <b>+91 '+phone+'</b> पर भेजा गया 6-digit OTP डालें';
+    renderOtpDots();
+    buildNumpad('otpNumpad', onOtpKey);
+  }).catch(e=>{
+    document.getElementById('otpWarn').textContent = '❌ OTP भेजने में दिक्कत: ' + e.message;
+  });
+}
+
+function resendOtp(){
+  if(otpState.mode === 'signup-phone'){ beginPhoneOtp(); }
+  else if(otpState.mode === 'forgot-phone'){ sendForgotOtp('phone'); }
+}
+
+function renderOtpDots(err){
+  const el = document.getElementById('otpDots'); el.innerHTML='';
+  const len = 6;
+  for(let i=0;i<len;i++){
+    const d = document.createElement('div');
+    d.className = 'pindot' + (i<otpState.input.length ? (err?' error':' filled') : '');
+    el.appendChild(d);
+  }
+}
+
+function onOtpKey(k){
+  const warn = document.getElementById('otpWarn');
+  if(k==='⌫'){ otpState.input = otpState.input.slice(0,-1); renderOtpDots(); return; }
+  if(otpState.input.length>=6) return;
+  otpState.input += k;
+  renderOtpDots();
+  if(otpState.input.length===6){
+    warn.textContent = 'Verify हो रहा है...';
+    if(otpState.mode === 'signup-phone'){
+      const credential = firebase.auth.PhoneAuthProvider.credential(otpState.verificationId, otpState.input);
+      auth.currentUser.linkWithCredential(credential).then(()=>{
+        finalizeSignup();
+      }).catch(e=>{
+        warn.textContent = '❌ ' + e.message;
+        setTimeout(()=>{ otpState.input=''; renderOtpDots(); }, 600);
+      });
+    } else if(otpState.mode === 'forgot-phone'){
+      otpState.forgotConfirmation.confirm(otpState.input).then(()=>{
+        warn.textContent = '';
+        toast_forgot_ok();
+      }).catch(e=>{
+        warn.textContent = '❌ ' + e.message;
+        setTimeout(()=>{ otpState.input=''; renderOtpDots(); }, 600);
+      });
+    }
+  }
+}
+
+function finalizeSignup(){
+  const p = otpState.pendingSignup;
+  const uid = auth.currentUser.uid;
+  db.collection('accounts').doc(uid).set({
+    name: p.name, email: p.email, phone: p.phone, pin: p.pin, appLockPin: p.appLockPin, role: p.role, provider:'email',
+    permissionsAsked: false, permissions: {camera:null, microphone:null, gallery:null}, lastEmailChangeAt: null,
+    status: 'active', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{
+    if(p.role !== 'admin') markDeviceSignedUp(p.email);
+    auth.signOut();
+    atoast('✅ Account बन गया — अब login करें');
+    backToChooser();
+    switchAuthTab('login');
+    document.getElementById('loginEmail').value = p.email;
+    document.getElementById('loginPhone').value = p.phone;
+    document.getElementById('suLockPin').value = '';
+    document.getElementById('suLockPinConfirm').value = '';
+  }).catch(e=>{
+    atoast('❌ Firestore save fail: ' + e.message, true);
+  });
+}
+
+/* ---------------- FORGOT PIN ---------------- */
+function goForgot(){
+  document.getElementById('fpEmail').value='';
+  document.getElementById('fpPhone').value='';
+  document.getElementById('fpErr').textContent='';
+  showStep('stepForgotChoose');
+}
+
+function sendForgotOtp(channel){
+  const err = document.getElementById('fpErr');
+  err.textContent = '';
+  if(channel==='phone'){
+    const phone = document.getElementById('fpPhone').value.trim();
+    if(!isValidPhone(phone)){ err.textContent='⚠️ सही 10-digit phone number डालें'; return; }
+    atoast('📲 Real OTP भेजा जा रहा है...');
+    auth.signInWithPhoneNumber('+91'+phone, ensureRecaptcha()).then(confirmationResult=>{
+      otpState.forgotConfirmation = confirmationResult;
+      otpState.mode = 'forgot-phone';
+      otpState.input = '';
+      document.getElementById('otpTargetLabel').innerHTML = 'Password reset — <b>+91 '+phone+'</b> पर भेजा गया 6-digit OTP डालें';
+      document.getElementById('otpWarn').textContent = '';
+      renderOtpDots();
+      buildNumpad('otpNumpad', onOtpKey);
+      showStep('stepOtp');
+    }).catch(e=>{
+      err.textContent = '❌ ' + e.message;
+    });
+  } else {
+    const email = document.getElementById('fpEmail').value.trim();
+    if(!isValidEmail(email)){ err.textContent='⚠️ सही Email डालें'; return; }
+    auth.sendPasswordResetEmail(email).then(()=>{
+      atoast('📧 Real password-reset email भेज दिया गया — अपना inbox check करें (यह app के PIN box से बाहर, Firebase के अपने page पर होता है)');
+    }).catch(e=>{
+      err.textContent = '❌ ' + e.message;
+    });
+  }
+}
+
+function toast_forgot_ok(){
+  atoast('✅ Phone verify हो गया — नया PIN सेट करें');
+  showStep('stepNewPin');
+  document.getElementById('newPinErr').textContent='';
+  document.getElementById('newPinVal').value='';
+}
+
+function submitNewPin(){
+  const val = document.getElementById('newPinVal').value.trim();
+  const err = document.getElementById('newPinErr');
+  if(!/^\d{4}$/.test(val)){ err.textContent='⚠️ 4-digit PIN डालें'; return; }
+  if(!auth.currentUser){ err.textContent='⚠️ Session expire हो गया, दोबारा try करें'; return; }
+  auth.currentUser.updatePassword(pinToPassword(val)).then(async ()=>{
+    await db.collection('accounts').doc(auth.currentUser.uid).set({ pin: val }, { merge:true });
+    const email = auth.currentUser.email;
+    auth.signOut();
+    atoast('✅ PIN reset हो गया, अब login करें');
+    backToChooser();
+    switchAuthTab('login');
+    if(email) document.getElementById('loginEmail').value = email;
+  }).catch(e=>{
+    err.textContent = '❌ ' + e.message;
+  });
+}
+
+/* ---------------- ADMIN DASHBOARD (live Firestore data) ---------------- */
+const AVATAR_COLORS = ['#3DDC97','#F2B84B','#E5484D','#7C8A9A','#4C9AFF','#C77DFF'];
+function colorFor(id){
+  let h=0; for(let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+let dashView = 'users'; // 'users' | 'trash'
+async function loadUsersFromFirestore(){
+  document.getElementById('userList').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Loading users…</div>';
+  try{
+    const snap = await db.collection('accounts').where('role','==','user').get();
+    users = snap.docs.map(d=>{
+      const v = d.data();
+      return { id:d.id, name:v.name||'User', color:colorFor(d.id), role:'Member',
+        status:v.status||'active', suspendUntil:v.suspendUntil||null, chatsLocked:0, pin:v.pin||'----', pinVisible:false,
+        email:v.email||'', phone:v.phone||'', trashed:v.trashed||false, provider:v.provider||'email' };
+    });
+    // auto-reactivate anyone whose temporary suspension has passed
+    const now = Date.now();
+    users.forEach(u=>{
+      if(u.status==='suspended' && u.suspendUntil && u.suspendUntil <= now){
+        u.status = 'active'; u.suspendUntil = null;
+        db.collection('accounts').doc(u.id).set({ status:'active', suspendUntil:null }, { merge:true }).catch(()=>{});
+      }
+    });
+  }catch(e){
+    atoast('❌ Users load नहीं हुए: ' + e.message, true);
+    users = [];
+  }
+  renderUsers();
+}
+
+function setDashView(v){
+  dashView = v;
+  document.getElementById('dashTabUsers').classList.toggle('active', v==='users');
+  document.getElementById('dashTabTrash').classList.toggle('active', v==='trash');
+  renderUsers();
+}
+
+function statusLabel(u){
+  if(u.status==='blocked') return 'BLOCKED';
+  if(u.status==='suspended') return u.suspendUntil ? 'TEMP SUSPENDED' : 'SUSPENDED';
+  return 'ACTIVE';
+}
+function statusTagClass(u){
+  if(u.status==='blocked') return 'blocked';
+  if(u.status==='suspended') return u.suspendUntil ? 'tempsuspend' : 'suspended';
+  return 'active';
+}
+
+function renderUsers(){
+  const visible = users.filter(u => dashView==='trash' ? u.trashed : !u.trashed);
+  document.getElementById('statTotal').textContent = users.filter(u=>!u.trashed).length;
+  document.getElementById('statActive').textContent = users.filter(u=>!u.trashed && u.status==='active').length;
+  document.getElementById('statSuspended').textContent = users.filter(u=>!u.trashed && u.status==='suspended').length;
+  document.getElementById('statBlocked').textContent = users.filter(u=>!u.trashed && u.status==='blocked').length;
+  document.getElementById('trashCount').textContent = users.filter(u=>u.trashed).length;
+
+  if(dashView==='trash'){
+    document.getElementById('userList').innerHTML = visible.length ? visible.map(u=>`
+      <div class="urow">
+        <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+        <div class="umain">
+          <div class="uname">${u.name} <span class="tag suspended">TRASHED</span></div>
+          <div class="usub">${u.email || u.phone || ''}</div>
+        </div>
+        <div class="actions">
+          <button class="abtn mint" title="Restore करें" onclick="restoreUser('${u.id}')">♻️</button>
+          <button class="abtn danger" title="Permanently delete करें" onclick="removeUser('${u.id}')">🗑️</button>
+        </div>
+      </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">Trash खाली है</div>';
+    return;
+  }
+
+  document.getElementById('userList').innerHTML = visible.length ? visible.map(u=>`
+    <div class="urow">
+      <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+      <div class="umain">
+        <div class="uname">${u.name} <span class="tag ${statusTagClass(u)}">${statusLabel(u)}</span></div>
+        <div class="usub">${u.email || u.phone || ''}${u.status==='suspended' && u.suspendUntil ? ' · ' + fmtSuspendRemaining(u.suspendUntil) : ''}</div>
+        <div class="pwdrow">
+          ${u.provider==='google'
+            ? `<span class="pwdval" style="color:var(--muted);">🔵 Google Sign-In (कोई password नहीं)</span>`
+            : `<span class="pwdval">${u.pinVisible ? u.pin : '••••'}</span><button class="pwdtoggle" onclick="togglePwd('${u.id}')">${u.pinVisible?'Hide':'Show'}</button>`
+          }
+        </div>
+      </div>
+      <div class="actions">
+        <button class="abtn ${u.status==='blocked'?'mint':''}" title="${u.status==='blocked'?'Unblock':'Block'}" onclick="toggleBlock('${u.id}')">🚫</button>
+        <button class="abtn ${u.status==='suspended'?'mint':''}" title="${u.status==='suspended'?'Reactivate':'Suspend'}" onclick="toggleSuspend('${u.id}')">⛔</button>
+        <button class="abtn" title="कुछ समय के लिए suspend करें" onclick="tempSuspendUser('${u.id}')">⏳</button>
+        <button class="abtn" title="Trash में भेजें (Temporary Delete)" onclick="tempDeleteUser('${u.id}')">🗑️</button>
+      </div>
+    </div>`).join('') : '<div style="text-align:center;color:var(--muted);padding:20px;">कोई registered user नहीं है</div>';
+}
+
+function fmtSuspendRemaining(until){
+  const ms = until - Date.now();
+  if(ms <= 0) return 'expire हो चुका';
+  const days = Math.ceil(ms / 86400000);
+  return days + ' din baaki';
+}
+
+function togglePwd(id){
+  const u = users.find(x=>x.id===id);
+  u.pinVisible = !u.pinVisible;
+  renderUsers();
+}
+
+async function toggleBlock(id){
+  const u = users.find(x=>x.id===id);
+  const wasBlocked = u.status==='blocked';
+  const prevStatus = u.status, prevSuspendUntil = u.suspendUntil;
+  const newStatus = wasBlocked ? 'active' : 'blocked';
+  try{
+    await db.collection('accounts').doc(id).set({ status:newStatus, suspendUntil:null }, { merge:true });
+    u.status = newStatus;
+    u.suspendUntil = null;
+    atoast(wasBlocked ? `✅ ${u.name} unblock कर दिया गया` : `🚫 ${u.name} block कर दिया गया`);
+  }catch(e){
+    u.status = prevStatus; u.suspendUntil = prevSuspendUntil;
+    atoast('❌ Server पर save नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+
+async function toggleSuspend(id){
+  const u = users.find(x=>x.id===id);
+  const wasSuspended = u.status==='suspended';
+  const prevStatus = u.status, prevSuspendUntil = u.suspendUntil;
+  const newStatus = wasSuspended ? 'active' : 'suspended';
+  try{
+    await db.collection('accounts').doc(id).set({ status:newStatus, suspendUntil:null }, { merge:true });
+    u.status = newStatus;
+    u.suspendUntil = null;
+    atoast(!wasSuspended ? `⛔ ${u.name} suspend कर दिया गया` : `✅ ${u.name} reactivate कर दिया गया`);
+  }catch(e){
+    u.status = prevStatus; u.suspendUntil = prevSuspendUntil;
+    atoast('❌ Server पर save नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+
+async function tempSuspendUser(id){
+  const u = users.find(x=>x.id===id);
+  const daysStr = prompt(`${u.name} को कितने दिनों के लिए suspend करें?`, '7');
+  if(daysStr===null) return;
+  const days = parseInt(daysStr, 10);
+  if(!days || days<=0){ atoast('⚠️ सही दिनों की संख्या डालें', true); return; }
+  const until = Date.now() + days*86400000;
+  const prevStatus = u.status, prevSuspendUntil = u.suspendUntil;
+  try{
+    await db.collection('accounts').doc(id).set({ status:'suspended', suspendUntil:until }, { merge:true });
+    u.status = 'suspended'; u.suspendUntil = until;
+    atoast(`⏳ ${u.name} ${days} din ke liye suspend कर दिया गया`);
+  }catch(e){
+    u.status = prevStatus; u.suspendUntil = prevSuspendUntil;
+    atoast('❌ Server पर save नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+
+/* ---- Temporary Delete (Trash) vs Permanent Delete ----
+   tempDeleteUser: account Firestore mein rehta hai (data safe), bas 'trashed'
+   flag set ho jaata hai — login block ho jaata hai, admin chaahe to Restore kar sakta hai.
+   removeUser: sirf Trash se hi call hota hai, aur ye permanent hai — Firestore document
+   hamesha ke liye delete ho jaata hai, wapas nahi aa sakta. */
+async function tempDeleteUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!confirm(`${u.name} को Trash में भेजें? (Account data safe रहेगा, login block हो जाएगा, बाद में Restore कर सकते हैं)`)) return;
+  try{
+    await db.collection('accounts').doc(id).set({ trashed:true, trashedAt: Date.now() }, { merge:true });
+    u.trashed = true;
+    atoast(`🗑️ ${u.name} Trash में भेज दिया गया (Restore किया जा सकता है)`);
+  }catch(e){
+    atoast('❌ Server पर save नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+
+async function restoreUser(id){
+  const u = users.find(x=>x.id===id);
+  try{
+    await db.collection('accounts').doc(id).set({ trashed:false, trashedAt:null }, { merge:true });
+    u.trashed = false;
+    atoast(`♻️ ${u.name} restore कर दिया गया`);
+  }catch(e){
+    atoast('❌ Server पर save नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+
+async function removeUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!confirm(`${u.name} को PERMANENTLY delete करें? यह wapas नहीं आएगा — Firestore account data हमेशा के लिए मिट जाएगा।`)) return;
+  try{
+    await db.collection('accounts').doc(id).delete();
+    users = users.filter(x=>x.id!==id);
+    atoast(`🗑️ ${u.name} permanently delete कर दिया गया`);
+  }catch(e){
+    atoast('❌ Server पर delete नहीं हुआ: ' + e.message, true);
+  }
+  renderUsers();
+}
+</script>
+
+<script>
+/* ---------------- STATE ---------------- */
+const state = {
+  lockMethod: 'pin',
+  appPin: null,
+  pattern: [0,4,8],
+  currentInput: '',
+  patternInput: [],
+  currentScreen: 'home',
+  activeChatId: null,
+  modalCtx: null, // {type:'unlock-app'} | {type:'set-chat-pin',id} | {type:'unlock-chat',id} | {type:'change-app-pin', step}
+  chats: [],
+  groups: [],
+  stories: [
+    {name:'आपकी Story', mine:true},
+  ],
+  reels: [],
+  otherUsers: [],
+  otherProfileBackTo:'home',
+  activeOtherProfileId:null,
+  notifications: [],
+  myStories: [],
+  myReels: [],
+  permissions: {camera:null, microphone:null, gallery:null},
+  needsPermissionsPrompt: false,
+  lastEmailChangeAt: null,
+  storyDraft:{ filterId:'none', filterCss:'none', caption:'', song:null, hiddenFrom:[] },
+  profile: {
+    name:'Aap',
+    color:'#3DDC97',
+    bio:'Privacy पहले, बाकी सब बाद में। 🛡',
+    birthday:'2000-01-15',
+    email:'',
+    editing:false
+  }
+};
+
+/* ---------------- YOUTUBE (real Shorts + full videos) ----------------
+   अपनी YouTube Data API v3 key यहां डालें:
+   Google Cloud Console → APIs & Services → Credentials → Create API Key
+   (और "YouTube Data API v3" enable करें उसी project में) */
+const YOUTUBE_API_KEY = 'AIzaSyCyn5G9eVUw1rMVginEGFfQxtWqVhkTPG4';
+let reelsState = { mode:'shorts', query:'shorts trending', items:[], loading:false, interactions:{} };
+
+function getReelInteraction(id, baseLikes, baseComments){
+  if(!reelsState.interactions[id]){
+    reelsState.interactions[id] = { liked:false, likeCount:baseLikes||0, comments:[], kavachFollowing:false };
+  }
+  return reelsState.interactions[id];
+}
+
+/* ---------------- STORY CREATOR (filters + song + hide-from) ---------------- */
+const STORY_FILTERS = [
+  {id:'none', name:'Normal', css:'none'},
+  {id:'bw', name:'B&W', css:'grayscale(1)'},
+  {id:'vintage', name:'Vintage', css:'sepia(0.55) contrast(1.1) brightness(1.05)'},
+  {id:'warm', name:'Warm', css:'saturate(1.5) hue-rotate(-8deg) brightness(1.05)'},
+  {id:'cool', name:'Cool', css:'saturate(1.2) hue-rotate(18deg)'},
+  {id:'vivid', name:'Vivid', css:'contrast(1.3) saturate(1.7)'},
+  {id:'fade', name:'Fade', css:'contrast(0.82) brightness(1.15) saturate(0.85)'},
+  {id:'noir', name:'Noir', css:'grayscale(1) contrast(1.4) brightness(0.9)'},
+];
+let songSearchResults = [];
+
+/* ---------------- HELPERS ---------------- */
+function toast(msg, danger){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (danger ? ' danger' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className='toast'; }, 2600);
+}
+function initials(name){ return name.trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+/* ---------------- NAVIGATION ---------------- */
+function navigate(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  state.currentScreen = screen;
+  const nav = document.getElementById('bottomnav');
+  const topLevel = ['home','reels','chats','groups','search','profile'];
+  nav.style.display = topLevel.includes(screen) ? 'flex' : 'none';
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.s===screen));
+  if(screen==='home') renderHome();
+  if(screen==='reels') renderReels();
+  if(screen==='chats') renderChats();
+  if(screen==='groups') renderGroups();
+  if(screen==='search'){ renderSearch(); loadDirectoryUsers(); }
+  if(screen==='settings') renderSettings();
+  if(screen==='profile') renderProfile();
+  if(screen==='notifications') renderNotifications();
+  if(screen==='otherprofile') renderOtherProfileView();
+  if(screen==='storycreate') renderStoryCreator();
+}
+
+function afterUnlockEnter(){
+  navigate('reels');
+  document.getElementById('bottomnav').style.display='flex';
+  if(state.needsPermissionsPrompt){
+    state.needsPermissionsPrompt = false;
+    setTimeout(openPermissionsPrompt, 400);
+  }
+}
+
+/* ---------------- LOCK SCREEN ---------------- */
+function setLockMethod(m){
+  state.lockMethod = m;
+  document.querySelectorAll('.method-btn').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  document.getElementById('lockPinArea').style.display = m==='pin' ? 'block':'none';
+  document.getElementById('lockPatternArea').style.display = m==='pattern' ? 'block':'none';
+  document.getElementById('lockFaceArea').style.display = m==='face' ? 'block':'none';
+  document.getElementById('lockStatus').textContent = (m==='pin' && state.appPin===null) ? 'अपना नया 4-digit Lock PIN बनाएं' : '';
+  document.getElementById('lockStatus').className = 'lock-status';
+  state.currentInput = ''; state.patternInput = [];
+  if(m==='pin') buildNumpad('lockNumpad', onLockPinKey);
+  if(m==='pattern') buildPatternGrid('lockPatternGrid', onLockPatternDone);
+  renderPinDots('lockPinDots', 0);
+}
+
+function buildNumpad(containerId, keyHandler){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    if(k===''){ b.className='numkey ghost'; b.disabled=true; }
+    else { b.className='numkey'; b.textContent=k; b.onclick=()=>keyHandler(k); }
+    el.appendChild(b);
+  });
+}
+
+function renderPinDots(containerId, count, errorState){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const d = document.createElement('div');
+    d.className = 'pindot' + (i<count ? (errorState?' error':' filled') : '');
+    el.appendChild(d);
+  }
+}
+
+function onLockPinKey(k){
+  const statusEl = document.getElementById('lockStatus');
+  if(k==='⌫'){ state.currentInput = state.currentInput.slice(0,-1); renderPinDots('lockPinDots', state.currentInput.length); return; }
+  if(state.currentInput.length>=4) return;
+  state.currentInput += k;
+  renderPinDots('lockPinDots', state.currentInput.length);
+  if(state.currentInput.length===4){
+    if(state.appPin===null){
+      // no PIN set yet on this account (e.g. Google sign-up) — let the user create one now
+      if(state.newLockPinStage!=='confirm'){
+        state.newLockPinFirst = state.currentInput;
+        state.newLockPinStage = 'confirm';
+        statusEl.textContent = 'PIN दोबारा डालें confirm करने के लिए'; statusEl.className='lock-status';
+        setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 300);
+      } else {
+        if(state.currentInput === state.newLockPinFirst){
+          state.appPin = state.currentInput;
+          state.newLockPinStage = null;
+          if(auth.currentUser){
+            db.collection('accounts').doc(auth.currentUser.uid).set({ appLockPin: state.appPin }, { merge:true }).catch(()=>{});
+          }
+          statusEl.textContent = 'Lock PIN सेट हो गया ✓'; statusEl.className='lock-status';
+          setTimeout(afterUnlockEnter, 350);
+        } else {
+          statusEl.textContent = 'PIN match नहीं हुआ, फिर से शुरू करें'; statusEl.className='lock-status err';
+          renderPinDots('lockPinDots', 4, true);
+          state.newLockPinStage = null;
+          setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 500);
+        }
+      }
+      return;
+    }
+    if(state.currentInput === state.appPin){
+      statusEl.textContent = 'Unlocked ✓'; statusEl.className='lock-status';
+      setTimeout(afterUnlockEnter, 350);
+    } else {
+      statusEl.textContent = 'Galat PIN, dobara try karein'; statusEl.className='lock-status err';
+      renderPinDots('lockPinDots', 4, true);
+      setTimeout(()=>{ state.currentInput=''; renderPinDots('lockPinDots',0); }, 500);
+    }
+  }
+}
+
+function buildPatternGrid(containerId, doneHandler){
+  const el = document.getElementById(containerId);
+  el.innerHTML='';
+  for(let i=0;i<9;i++){
+    const n = document.createElement('div');
+    n.className='pnode';
+    n.dataset.i = i;
+    n.onclick = ()=>{
+      if(state.patternInput.includes(i)) return;
+      state.patternInput.push(i);
+      n.classList.add('on');
+      if(state.patternInput.length===3) doneHandler();
+    };
+    el.appendChild(n);
+  }
+}
+
+function onLockPatternDone(){
+  const statusEl = document.getElementById('lockStatus');
+  const match = JSON.stringify(state.patternInput)===JSON.stringify(state.pattern);
+  if(match){
+    statusEl.textContent='Unlocked ✓'; statusEl.className='lock-status';
+    setTimeout(afterUnlockEnter, 350);
+  } else {
+    statusEl.textContent='Galat pattern, dobara try karein'; statusEl.className='lock-status err';
+    document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>n.classList.add('err'));
+    setTimeout(()=>{
+      state.patternInput=[];
+      document.querySelectorAll('#lockPatternGrid .pnode').forEach(n=>{n.classList.remove('on');n.classList.remove('err');});
+    }, 500);
+  }
+}
+
+document.getElementById('faceScanBtn').onclick = function(){
+  const circle = document.getElementById('faceCircle');
+  const statusEl = document.getElementById('lockStatus');
+  circle.classList.add('scanning');
+  statusEl.textContent = 'Scan ho raha hai…'; statusEl.className='lock-status';
+  setTimeout(()=>{
+    circle.classList.remove('scanning');
+    statusEl.textContent = 'Face verified ✓';
+    setTimeout(afterUnlockEnter, 350);
+  }, 1300);
+};
+
+/* ---------------- HOME (Stories + Feed/Reels) ---------------- */
+function renderHome(){
+  const btn = document.getElementById('homeProfileBtn');
+  btn.style.background = state.profile.color;
+  btn.textContent = initials(state.profile.name);
+
+  const row = document.getElementById('storiesRow');
+  row.innerHTML = state.stories.map(s=>`
+    <div class="story" onclick="${s.mine?`openStoryCreator()`:`openOtherProfile('${s.uid}','home')`}" style="cursor:pointer;">
+      <div class="story-ring ${s.seen?'seen':''}">
+        <div class="story-avatar">${s.mine ? '+' : initials(s.name)}</div>
+      </div>
+      <div class="story-name">${s.mine? 'Aapki Story' : s.name}${s.song?' 🎵':''}</div>
+    </div>`).join('');
+
+  const feed = document.getElementById('feedList');
+  if(!state.myReels.length){
+    feed.innerHTML = '<div class="empty-hint">अभी कोई post नहीं — ऊपर 🎬 Reels tab से real videos देखें या अपनी खुद की reel post करें</div>';
+  } else {
+    feed.innerHTML = state.myReels.map(r=>`
+      <div class="reel-card">
+        <div class="reel-media"><span class="reel-tag">REEL</span>▶</div>
+        <div class="reel-meta">
+          <div class="reel-user">${state.profile.name}</div>
+          <div class="reel-cap">${r.cap}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+/* ---------------- OTHER USER PROFILE (Follow/Unfollow) ---------------- */
+function openOtherProfile(uid, backTo){
+  if(!uid) return;
+  state.activeOtherProfileId = uid;
+  state.otherProfileBackTo = backTo || 'home';
+  navigate('otherprofile');
+}
+
+function renderOtherProfileView(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u) return;
+  document.getElementById('opAvatar').style.background = u.color;
+  document.getElementById('opAvatar').textContent = initials(u.name);
+  document.getElementById('opName').textContent = u.name;
+  document.getElementById('opFollowers').textContent = `${u.followers} followers`;
+  document.getElementById('opBio').textContent = u.bio;
+  document.getElementById('opBday').textContent = fmtBday(u.birthday);
+  const btn = document.getElementById('opFollowBtn');
+  btn.textContent = u.following ? 'Following ✓' : 'Follow';
+  btn.style.background = u.following ? 'var(--surface-2)' : 'var(--mint)';
+  btn.style.color = u.following ? 'var(--text)' : '#06110B';
+  btn.style.border = u.following ? '1px solid var(--border)' : 'none';
+}
+
+function toggleFollow(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u) return;
+  u.following = !u.following;
+  u.followers += u.following ? 1 : -1;
+  toast(u.following ? `✅ ${u.name} को Follow कर दिया` : `Unfollowed ${u.name}`);
+  renderOtherProfileView();
+  if(u.following){
+    setTimeout(()=>{
+      addNotification('follow_accept', `${u.name} ने आपकी Follow request accept कर ली ✅`, u);
+    }, 2200);
+  }
+}
+
+async function messageUser(){
+  const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
+  if(!u || !auth.currentUser) return;
+  const chatId = chatIdFor(auth.currentUser.uid, u.id);
+  await db.collection('chats').doc(chatId).set({
+    participants: [auth.currentUser.uid, u.id],
+    names: { [auth.currentUser.uid]: state.profile.name, [u.id]: u.name },
+    colors: { [auth.currentUser.uid]: state.profile.color, [u.id]: u.color }
+  }, { merge:true });
+  openChat(chatId);
+}
+
+/* ---------------- PROFILE ---------------- */
+function fmtBday(dstr){
+  if(!dstr) return 'Set nahi kiya gaya';
+  const d = new Date(dstr+'T00:00:00');
+  return d.toLocaleDateString('hi-IN',{day:'numeric', month:'long', year:'numeric'});
+}
+
+function renderProfile(){
+  const p = state.profile;
+  document.getElementById('profileAvatarBig').style.background = p.color;
+  document.getElementById('profileAvatarBig').textContent = initials(p.name);
+  document.getElementById('profileNameView').textContent = p.name;
+  document.getElementById('bioView').textContent = p.bio;
+  document.getElementById('bioEdit').value = p.bio;
+  document.getElementById('bdayViewText').textContent = fmtBday(p.birthday);
+  document.getElementById('bdayEdit').value = p.birthday;
+  document.getElementById('nameView').textContent = p.name;
+  document.getElementById('nameEdit').value = p.name;
+  setProfileEditMode(false);
+  renderMyContent();
+  updateNotifBadge();
+}
+
+function renderMyContent(){
+  const sEl = document.getElementById('myStoriesGrid');
+  if(sEl){
+    sEl.innerHTML = state.myStories.length ? state.myStories.map((s,i)=>`
+      <div class="search-card" onclick="viewMyStory(${i})">
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--mint), #0B0F14); filter:${s.filterCss||'none'};">📖<div class="search-play">▶</div></div>
+        <div class="search-meta"><div class="search-name">${s.caption || 'Story'}</div><div class="search-sub">${s.time}${s.song?' · 🎵':''}</div></div>
+      </div>`).join('') : '<div class="empty-hint">अभी कोई story post नहीं की</div>';
+  }
+  const rEl = document.getElementById('myReelsGrid');
+  if(rEl){
+    rEl.innerHTML = state.myReels.map(r=>`
+      <div class="search-card">
+        <div class="search-thumb" style="background:linear-gradient(160deg, var(--amber), #0B0F14);">🎬<div class="search-play">▶</div></div>
+        <div class="search-meta"><div class="search-name">${r.cap}</div><div class="search-sub">❤️ ${r.likes} · 💬 ${r.comments}</div></div>
+      </div>`).join('');
+  }
+}
+
+function viewMyStory(i){
+  const s = state.myStories[i];
+  if(!s) return;
+  toast('📖 ' + (s.caption || 'Story') + (s.song ? ' 🎵' : ''));
+}
+
+/* ---------------- APP PERMISSIONS ---------------- */
+function openPermissionsPrompt(){
+  document.getElementById('permissionsOverlay').classList.add('active');
+  updatePermissionUI();
+}
+function closePermissionsPrompt(){
+  document.getElementById('permissionsOverlay').classList.remove('active');
+  savePermissionsToAccount();
+}
+
+async function requestPermission(kind){
+  if(kind==='gallery'){
+    state.permissions.gallery = true;
+    updatePermissionUI();
+    savePermissionsToAccount();
+    return;
+  }
+  try{
+    const constraints = kind==='camera' ? {video:true} : {audio:true};
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    stream.getTracks().forEach(t=>t.stop());
+    state.permissions[kind] = true;
+    toast((kind==='camera'?'📷 Camera':'🎤 Microphone') + ' allow हो गया');
+  } catch(e){
+    state.permissions[kind] = false;
+    toast('❌ ' + (kind==='camera'?'Camera':'Microphone') + ' access नहीं मिला', true);
+  }
+  updatePermissionUI();
+  savePermissionsToAccount();
+}
+
+function updatePermissionUI(){
+  const label = v => v===true ? '✅ Allowed' : (v===false ? '❌ Denied' : 'Allow');
+  const ids = { camera:['permCameraBtn','settPermCameraBtn'], microphone:['permMicBtn','settPermMicBtn'], gallery:['permGalleryBtn','settPermGalleryBtn'] };
+  Object.keys(ids).forEach(k=>{
+    ids[k].forEach(id=>{
+      const btn = document.getElementById(id);
+      if(btn) btn.textContent = label(state.permissions[k]);
+    });
+  });
+}
+
+function savePermissionsToAccount(){
+  if(!auth.currentUser) return;
+  db.collection('accounts').doc(auth.currentUser.uid).set({ permissions: state.permissions, permissionsAsked:true }, {merge:true}).catch(()=>{});
+}
+
+/* ---------------- REEL CREATOR ---------------- */
+let reelDraft = { source:null };
+function openReelCreator(){
+  reelDraft = { source:null };
+  document.getElementById('reelCaptionInput').value = '';
+  document.getElementById('reelSourceStatus').textContent = '';
+  document.getElementById('reelCreatorOverlay').classList.add('active');
+}
+function closeReelCreator(){
+  document.getElementById('reelCreatorOverlay').classList.remove('active');
+}
+function pickReelSource(src){
+  reelDraft.source = src;
+  document.getElementById('reelSourceStatus').textContent = (src==='camera' ? '📷 Camera' : '🖼️ Gallery') + ' select किया गया';
+  if(src==='camera' && state.permissions.camera!==true) requestPermission('camera');
+  if(src==='gallery' && state.permissions.gallery!==true) requestPermission('gallery');
+}
+function submitReel(){
+  const cap = document.getElementById('reelCaptionInput').value.trim();
+  if(!cap){ toast('⚠️ Caption डालें', true); return; }
+  state.myReels.unshift({ cap, likes:'0', comments:'0' });
+  toast('✅ Reel post हो गई');
+  closeReelCreator();
+  renderMyContent();
+}
+
+/* ---------------- CHANGE EMAIL (7-day cooldown) ---------------- */
+function emailChangeDaysRemaining(){
+  if(!state.lastEmailChangeAt) return 0;
+  const lastMs = state.lastEmailChangeAt.toMillis ? state.lastEmailChangeAt.toMillis() : new Date(state.lastEmailChangeAt).getTime();
+  const daysPassed = (Date.now() - lastMs) / 86400000;
+  return daysPassed >= 7 ? 0 : Math.ceil(7 - daysPassed);
+}
+function openChangeEmail(){
+  const err = document.getElementById('emailChangeErr'); err.textContent='';
+  document.getElementById('newEmailInput').value = '';
+  const remaining = emailChangeDaysRemaining();
+  if(remaining > 0){
+    document.getElementById('emailChangeSub').textContent = `Email दोबारा ${remaining} दिन बाद change कर सकते हैं`;
+    document.getElementById('newEmailInput').disabled = true;
+  } else {
+    document.getElementById('emailChangeSub').textContent = 'नया email address डालें';
+    document.getElementById('newEmailInput').disabled = false;
+  }
+  document.getElementById('emailChangeOverlay').classList.add('active');
+}
+function closeChangeEmail(){
+  document.getElementById('emailChangeOverlay').classList.remove('active');
+}
+function submitEmailChange(){
+  const err = document.getElementById('emailChangeErr'); err.textContent = '';
+  const remaining = emailChangeDaysRemaining();
+  if(remaining > 0){ err.textContent = `⏳ अभी ${remaining} दिन बाकी हैं`; return; }
+  const newEmail = document.getElementById('newEmailInput').value.trim();
+  if(!isValidEmail(newEmail)){ err.textContent = '⚠️ सही Email डालें'; return; }
+  atoast('⏳ Email update हो रहा है...');
+  auth.currentUser.updateEmail(newEmail).then(()=>{
+    return db.collection('accounts').doc(auth.currentUser.uid).set({ email:newEmail, lastEmailChangeAt: firebase.firestore.FieldValue.serverTimestamp() }, {merge:true});
+  }).then(()=>{
+    state.profile.email = newEmail;
+    state.lastEmailChangeAt = new Date();
+    document.getElementById('settEmailCurrent').textContent = newEmail;
+    toast('✅ Email बदल दिया गया');
+    closeChangeEmail();
+  }).catch(e=>{
+    err.textContent = e.code==='auth/requires-recent-login' ? '⚠️ सुरक्षा के लिए दोबारा login करके email बदलें' : ('❌ ' + e.message);
+  });
+}
+
+/* ---------------- NOTIFICATIONS ---------------- */
+function addNotification(type, text, relatedUser){
+  state.notifications.unshift({
+    id: 'n_' + Date.now() + Math.random().toString(36).slice(2,6),
+    type, text, time:'अभी', read:false,
+    color: relatedUser ? relatedUser.color : '#3DDC97',
+    initial: relatedUser ? initials(relatedUser.name) : '🔔'
+  });
+  updateNotifBadge();
+  toast(text);
+  if(state.currentScreen==='notifications') renderNotifications();
+}
+
+function updateNotifBadge(){
+  const badge = document.getElementById('notifBadge');
+  if(!badge) return;
+  const unread = state.notifications.filter(n=>!n.read).length;
+  badge.style.display = unread>0 ? 'flex' : 'none';
+  badge.textContent = unread>9 ? '9+' : String(unread);
+}
+
+function renderNotifications(){
+  const el = document.getElementById('notifList');
+  if(!state.notifications.length){
+    el.innerHTML = '<div class="empty-hint">अभी कोई notification नहीं है</div>';
+  } else {
+    el.innerHTML = state.notifications.map(n=>`
+      <div class="list-row">
+        <div class="avatar" style="background:${n.color};">${n.initial}</div>
+        <div class="row-main">
+          <div class="row-title">${n.text}</div>
+          <div class="row-sub">${n.time}</div>
+        </div>
+        ${n.read?'':'<div style="width:8px;height:8px;border-radius:50%;background:var(--mint);flex:0 0 auto;"></div>'}
+      </div>`).join('');
+  }
+  state.notifications.forEach(n=>n.read=true);
+  updateNotifBadge();
+}
+
+function setProfileEditMode(on){
+  state.profile.editing = on;
+  document.getElementById('profileEditBtn').textContent = on ? 'Cancel' : 'Edit';
+  document.getElementById('bioView').style.display = on ? 'none':'block';
+  document.getElementById('bioEdit').style.display = on ? 'block':'none';
+  document.getElementById('bdayView').style.display = on ? 'none':'flex';
+  document.getElementById('bdayEdit').style.display = on ? 'block':'none';
+  document.getElementById('nameView').style.display = on ? 'none':'block';
+  document.getElementById('nameEdit').style.display = on ? 'block':'none';
+  document.getElementById('profileSaveBtn').style.display = on ? 'block':'none';
+}
+
+function toggleProfileEdit(){
+  if(state.profile.editing){
+    renderProfile(); // cancel -> revert to saved values
+  } else {
+    setProfileEditMode(true);
+  }
+}
+
+function saveProfile(){
+  const p = state.profile;
+  p.name = document.getElementById('nameEdit').value.trim() || p.name;
+  p.bio = document.getElementById('bioEdit').value.trim();
+  p.birthday = document.getElementById('bdayEdit').value || p.birthday;
+  toast('✅ Profile update हो गई');
+  renderProfile();
+}
+
+/* ---------------- REELS / VIDEOS (real YouTube Data API v3) ---------------- */
+function setReelsMode(mode){
+  reelsState.mode = mode;
+  document.getElementById('rtShorts').classList.toggle('active', mode==='shorts');
+  document.getElementById('rtVideos').classList.toggle('active', mode==='videos');
+  reelsState.query = mode==='shorts' ? 'shorts trending' : 'trending';
+  document.getElementById('reelsSearch').value = '';
+  renderReels();
+}
+
+function searchReels(){
+  const q = document.getElementById('reelsSearch').value.trim();
+  reelsState.query = q || (reelsState.mode==='shorts' ? 'shorts trending' : 'trending');
+  renderReels();
+}
+
+/* ---- Firestore-backed cache for YouTube search results ----
+   Quota bachane ke liye: same query+mode dobara aane par API call
+   nahi jaati, seedha Firestore se cached result mil jaata hai.
+   YT_CACHE_TTL_MS = kitni der tak cache "fresh" mana jaaye. */
+const YT_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ghante
+function ytCacheKey(query, mode){
+  return (mode||'x') + '__' + query.trim().toLowerCase().replace(/[^a-z0-9\u0900-\u097F]+/g,'_').slice(0,120);
+}
+async function getYoutubeCache(query, mode, allowStale){
+  try{
+    const key = ytCacheKey(query, mode);
+    const snap = await db.collection('yt_cache').doc(key).get();
+    if(!snap.exists) return null;
+    const data = snap.data();
+    if(!data.items || !data.fetchedAt) return null;
+    const age = Date.now() - data.fetchedAt;
+    if(!allowStale && age > YT_CACHE_TTL_MS) return null; // stale, refetch from API
+    return data.items;
+  }catch(e){ return null; } // cache read fail -> fall through to live API
+}
+async function setYoutubeCache(query, mode, items){
+  try{
+    const key = ytCacheKey(query, mode);
+    await db.collection('yt_cache').doc(key).set({ items, fetchedAt: Date.now(), query, mode });
+  }catch(e){ /* cache write fail is non-fatal */ }
+}
+
+async function fetchYouTube(query, mode){
+  // pehle fresh cache check karo — agar mil gaya to API call bilkul nahi jaayegi
+  const cached = await getYoutubeCache(query, mode, false);
+  if(cached) return cached;
+
+  if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.indexOf('PASTE_YOUR') === 0){
+    throw new Error('YouTube API key set नहीं है — script में YOUTUBE_API_KEY भरें');
+  }
+  const durationParam = mode==='shorts' ? '&videoDuration=short' : '&videoDuration=medium';
+  const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15'
+    + durationParam + '&q=' + encodeURIComponent(query) + '&key=' + YOUTUBE_API_KEY;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.error){
+    // quota khatam ho gayi ho to purana (stale) cache better-than-nothing dikha do
+    const stale = await getYoutubeCache(query, mode, true);
+    if(stale) return stale;
+    throw new Error(data.error.message || 'YouTube API error');
+  }
+  const items = (data.items || []).map(it=>({
+    id: it.id.videoId,
+    title: it.snippet.title,
+    channel: it.snippet.channelTitle,
+    channelId: it.snippet.channelId,
+    thumb: (it.snippet.thumbnails.high || it.snippet.thumbnails.medium || it.snippet.thumbnails.default).url,
+    likeCount:0, commentCount:0
+  }));
+  if(items.length){
+    try{
+      const ids = items.map(v=>v.id).join(',');
+      const statsUrl = 'https://www.googleapis.com/youtube/v3/videos?part=statistics&id=' + ids + '&key=' + YOUTUBE_API_KEY;
+      const sRes = await fetch(statsUrl);
+      const sData = await sRes.json();
+      (sData.items || []).forEach(s=>{
+        const v = items.find(x=>x.id===s.id);
+        if(v && s.statistics){
+          v.likeCount = parseInt(s.statistics.likeCount || '0', 10);
+          v.commentCount = parseInt(s.statistics.commentCount || '0', 10);
+        }
+      });
+    }catch(e){ /* stats fetch fail is non-fatal, counts stay 0 */ }
+  }
+  setYoutubeCache(query, mode, items); // background save, response ka wait nahi karte
+  return items;
+}
+
+async function fetchYoutubeComments(videoId){
+  // comments bhi cache karte hain (1 ghante ke liye) — same video ke comments baar-baar load hote hain
+  const cacheKey = 'comments_' + videoId;
+  try{
+    const snap = await db.collection('yt_cache').doc(cacheKey).get();
+    if(snap.exists){
+      const d = snap.data();
+      if(d.items && d.fetchedAt && (Date.now()-d.fetchedAt) < 60*60*1000) return d.items;
+    }
+  }catch(e){ /* cache read fail -> fall through */ }
+
+  const url = 'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=20&order=relevance&videoId=' + videoId + '&key=' + YOUTUBE_API_KEY;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message || 'Comments load नहीं हुए (शायद comments off हैं)');
+  const comments = (data.items || []).map(it=>{
+    const c = it.snippet.topLevelComment.snippet;
+    return { author: c.authorDisplayName, text: c.textDisplay, mine:false };
+  });
+  db.collection('yt_cache').doc(cacheKey).set({ items:comments, fetchedAt:Date.now() }).catch(()=>{});
+  return comments;
+}
+
+async function renderReels(){
+  const el = document.getElementById('reelsFeed');
+  if(reelsState.loading) return;
+  reelsState.loading = true;
+  el.innerHTML = '<div class="reels-loading">🎬 YouTube से load हो रहा है...</div>';
+  try{
+    const items = await fetchYouTube(reelsState.query, reelsState.mode);
+    reelsState.items = items;
+    if(!items.length){
+      el.innerHTML = '<div class="reels-empty">कोई video नहीं मिला — दूसरा search try करें<br><button class="btn-primary" style="width:auto; margin-top:12px; padding:9px 18px;" onclick="renderReels()">🔄 फिर कोशिश करें</button></div>';
+      return;
+    }
+    if(reelsState.mode === 'shorts'){
+      el.innerHTML = items.map(v=>{
+        const ix = getReelInteraction(v.id, v.likeCount, v.commentCount);
+        return `
+        <div class="reel-slide">
+          <div class="video-thumb-play" style="background-image:url('${v.thumb}'); background-size:cover; background-position:center; position:absolute; inset:0;"></div>
+          <div class="playicon" onclick="openVideoPlayer('${v.id}', true)">▶</div>
+          <div class="reel-side">
+            <div class="ricon" onclick="openVideoPlayer('${v.id}', true)">▶<span>Play</span></div>
+            <div class="ricon ${ix.liked?'liked':''}" onclick="toggleReelLike('${v.id}')">${ix.liked?'❤️':'🤍'}<span>${fmtCount(ix.likeCount)}</span></div>
+            <div class="ricon" onclick="openReelComments('${v.id}')">💬<span>${fmtCount(v.commentCount + ix.comments.length)}</span></div>
+            <div class="ricon" onclick="shareReel('${v.id}')">↗️<span>Share</span></div>
+          </div>
+          <div class="reel-info">
+            <div class="rtag">YouTube Shorts</div>
+            <div class="ruser"><div class="ravatar" style="background:#3DDC97">${initials(v.channel||'YT')}</div>${v.channel}</div>
+            <div class="rcap">${v.title}</div>
+            <div class="reel-follow-row">
+              <button class="follow-chip kavach ${ix.kavachFollowing?'on':''}" onclick="toggleKavachFollow('${v.id}')">${ix.kavachFollowing?'✅ Kavach पर Following':'➕ Kavach Follow'}</button>
+              <button class="follow-chip yt" onclick="subscribeOnYoutube('${v.channelId}')">🔴 YouTube Subscribe</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      el.innerHTML = items.map(v=>{
+        const ix = getReelInteraction(v.id, v.likeCount, v.commentCount);
+        return `
+        <div class="video-card">
+          <img src="${v.thumb}" alt="" onclick="openVideoPlayer('${v.id}', false)">
+          <div class="vc-meta">
+            <div class="vc-title">${v.title}</div>
+            <div class="vc-channel">${v.channel}</div>
+            <div class="reel-follow-row" style="margin-top:10px;">
+              <button class="follow-chip kavach ${ix.liked?'on':''}" onclick="event.stopPropagation(); toggleReelLike('${v.id}')">${ix.liked?'❤️':'🤍'} ${fmtCount(ix.likeCount)}</button>
+              <button class="follow-chip" onclick="event.stopPropagation(); openReelComments('${v.id}')">💬 ${fmtCount(v.commentCount + ix.comments.length)}</button>
+              <button class="follow-chip kavach ${ix.kavachFollowing?'on':''}" onclick="event.stopPropagation(); toggleKavachFollow('${v.id}')">${ix.kavachFollowing?'✅ Following':'➕ Kavach Follow'}</button>
+              <button class="follow-chip yt" onclick="event.stopPropagation(); subscribeOnYoutube('${v.channelId}')">🔴 Subscribe</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){
+    el.innerHTML = '<div class="reels-empty">❌ '+ e.message +'<br><span style="font-size:11px;">अगर यह बार-बार आ रहा है तो YouTube API key check करें — Google Cloud Console में "YouTube Data API v3" enable है या नहीं, key किसी domain restriction में block तो नहीं, और daily quota खत्म तो नहीं हुआ।</span><br><button class="btn-primary" style="width:auto; margin-top:12px; padding:9px 18px;" onclick="renderReels()">🔄 फिर कोशिश करें</button></div>';
+  }finally{
+    reelsState.loading = false;
+  }
+}
+
+function fmtCount(n){
+  n = n || 0;
+  if(n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'M';
+  if(n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
+  return String(n);
+}
+
+function findReelItem(videoId){
+  return (reelsState.items || []).find(v=>v.id===videoId);
+}
+
+function toggleReelLike(videoId){
+  const ix = getReelInteraction(videoId);
+  ix.liked = !ix.liked;
+  ix.likeCount += ix.liked ? 1 : -1;
+  toast(ix.liked ? '❤️ Liked' : 'Like हटा दिया');
+  renderReels();
+}
+
+function toggleKavachFollow(videoId){
+  const ix = getReelInteraction(videoId);
+  const v = findReelItem(videoId);
+  ix.kavachFollowing = !ix.kavachFollowing;
+  toast(ix.kavachFollowing ? `✅ ${v?v.channel:'Creator'} को Kavach पर Follow किया` : 'Unfollowed');
+  renderReels();
+}
+
+function subscribeOnYoutube(channelId){
+  if(!channelId){ toast('❌ Channel नहीं मिला', true); return; }
+  window.open('https://www.youtube.com/channel/' + channelId + '?sub_confirmation=1', '_blank');
+}
+
+function shareReel(videoId){
+  const url = 'https://youtube.com/shorts/' + videoId;
+  if(navigator.share){
+    navigator.share({ title:'Kavach Reel', url }).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(()=>toast('🔗 Link copy हो गया')).catch(()=>toast(url));
+  } else {
+    toast(url);
+  }
+}
+
+let activeCommentsVideoId = null;
+function openReelComments(videoId){
+  activeCommentsVideoId = videoId;
+  document.getElementById('reelCommentsOverlay').classList.add('active');
+  document.getElementById('reelCommentInput').value = '';
+  renderReelComments(true);
+}
+
+function closeReelComments(){
+  document.getElementById('reelCommentsOverlay').classList.remove('active');
+  activeCommentsVideoId = null;
+  renderReels();
+}
+
+async function renderReelComments(fetchFromYoutube){
+  const listEl = document.getElementById('reelCommentsList');
+  const ix = getReelInteraction(activeCommentsVideoId);
+  const localHtml = ix.comments.map(c=>`
+    <div class="comment-item">
+      <div class="avatar" style="background:${state.profile.color}">${initials(c.author)}</div>
+      <div class="c-body"><div class="c-name">${c.author}</div><div class="c-text">${c.text}</div></div>
+    </div>`).join('');
+
+  if(fetchFromYoutube){
+    listEl.innerHTML = '<div class="reels-loading">💬 Comments load हो रहे हैं...</div>' + localHtml;
+    try{
+      const ytComments = await fetchYoutubeComments(activeCommentsVideoId);
+      ix.ytComments = ytComments;
+    }catch(e){
+      ix.ytComments = [];
+    }
+  }
+  const ytHtml = (ix.ytComments || []).map(c=>`
+    <div class="comment-item">
+      <div class="avatar" style="background:#7C8A9A">${initials(c.author)}</div>
+      <div class="c-body"><div class="c-name">${c.author}</div><div class="c-text">${c.text}</div></div>
+    </div>`).join('');
+
+  const all = localHtml + ytHtml;
+  listEl.innerHTML = all || '<div class="empty-hint">अभी कोई comment नहीं — पहला comment करें</div>';
+}
+
+function submitReelComment(){
+  const input = document.getElementById('reelCommentInput');
+  const txt = input.value.trim();
+  if(!txt || !activeCommentsVideoId) return;
+  const ix = getReelInteraction(activeCommentsVideoId);
+  ix.comments.push({ author: state.profile.name, text: txt });
+  input.value = '';
+  renderReelComments(false);
+}
+
+function openVideoPlayer(videoId, loop){
+  const wrap = document.getElementById('videoPlayerWrap');
+  const params = loop
+    ? `autoplay=1&mute=1&loop=1&playlist=${videoId}&playsinline=1`
+    : `autoplay=1&playsinline=1`;
+  wrap.innerHTML = `<iframe height="${loop?'70%':'220'}" src="https://www.youtube.com/embed/${videoId}?${params}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  document.getElementById('videoOverlay').classList.add('show');
+}
+/* ---------------- STORY CREATOR ---------------- */
+function openStoryCreator(){
+  state.storyDraft = { filterId:'none', filterCss:'none', caption:'', song:null, hiddenFrom:[] };
+  navigate('storycreate');
+}
+
+function renderStoryCreator(){
+  document.getElementById('storyCaption').value = state.storyDraft.caption || '';
+  document.getElementById('storyPreview').style.filter = state.storyDraft.filterCss || 'none';
+  renderFilters();
+  renderSongRow();
+  renderHideRow();
+}
+
+function renderFilters(){
+  const row = document.getElementById('filtersRow');
+  row.innerHTML = STORY_FILTERS.map(f=>`
+    <div class="filter-chip ${state.storyDraft.filterId===f.id?'active':''}" onclick="selectFilter('${f.id}')">
+      <div class="filter-thumb ${state.storyDraft.filterId===f.id?'active':''}" style="filter:${f.css}"></div>
+      <div class="filter-label">${f.name}</div>
+    </div>`).join('');
+}
+
+function selectFilter(id){
+  const f = STORY_FILTERS.find(x=>x.id===id);
+  if(!f) return;
+  state.storyDraft.filterId = f.id;
+  state.storyDraft.filterCss = f.css;
+  document.getElementById('storyPreview').style.filter = f.css;
+  renderFilters();
+}
+
+/* ---- Song search (YouTube) ---- */
+function openSongSearch(){
+  document.getElementById('songSearchOverlay').classList.add('active');
+  document.getElementById('songSearchInput').value = '';
+  document.getElementById('songResults').innerHTML = '<div class="empty-hint">Song खोजने के लिए टाइप करके Enter दबाएं</div>';
+  document.getElementById('songSearchInput').focus();
+}
+function closeSongSearch(){
+  document.getElementById('songSearchOverlay').classList.remove('active');
+}
+
+async function searchSongs(){
+  const q = document.getElementById('songSearchInput').value.trim();
+  const el = document.getElementById('songResults');
+  if(!q) return;
+  el.innerHTML = '<div class="reels-loading">🎵 खोजा जा रहा है...</div>';
+  try{
+    const items = await fetchYouTube(q + ' song', 'videos');
+    songSearchResults = items;
+    if(!items.length){
+      el.innerHTML = '<div class="reels-empty">कोई song नहीं मिला — दूसरा नाम try करें</div>';
+      return;
+    }
+    el.innerHTML = items.map(v=>`
+      <div class="list-row" style="cursor:pointer;" onclick="selectSong('${v.id}')">
+        <img src="${v.thumb}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex:0 0 auto;">
+        <div class="row-main">
+          <div class="row-title">${v.title}</div>
+          <div class="row-sub">${v.channel}</div>
+        </div>
+        <span style="color:var(--mint);font-size:13px;">+ Add</span>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML = '<div class="reels-empty">❌ '+ e.message +'</div>';
+  }
+}
+
+function selectSong(id){
+  const v = songSearchResults.find(x=>x.id===id);
+  if(!v) return;
+  state.storyDraft.song = v;
+  renderSongRow();
+  closeSongSearch();
+  toast('🎵 Song add हो गया — "' + v.title + '"');
+}
+
+function removeSong(){
+  state.storyDraft.song = null;
+  renderSongRow();
+}
+
+function renderSongRow(){
+  const wrap = document.getElementById('songRowWrap');
+  const v = state.storyDraft.song;
+  if(v){
+    wrap.innerHTML = `
+      <div class="settings-row">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          <img src="${v.thumb}" style="width:38px;height:38px;border-radius:8px;object-fit:cover;flex:0 0 auto;">
+          <div style="min-width:0;">
+            <div style="font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px;">${v.title}</div>
+            <div class="desc">${v.channel} • story पर play होगा</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; flex:0 0 auto;">
+          <button class="method-btn" onclick="openSongSearch()">Change</button>
+          <button class="lock-btn" onclick="removeSong()" title="हटाएं">✕</button>
+        </div>
+      </div>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="settings-row" style="cursor:pointer;" onclick="openSongSearch()">
+        <div>🎵 Song add करें<div class="desc">YouTube से song search करें, story पर automatically play होगा</div></div>
+        <span>→</span>
+      </div>`;
+  }
+}
+
+/* ---- Hide-from search ---- */
+function openHideSearch(){
+  document.getElementById('hideSearchOverlay').classList.add('active');
+  document.getElementById('hideSearchInput').value = '';
+  renderHideResults();
+  document.getElementById('hideSearchInput').focus();
+}
+function closeHideSearch(){
+  document.getElementById('hideSearchOverlay').classList.remove('active');
+  renderHideRow();
+}
+
+function renderHideResults(){
+  const q = (document.getElementById('hideSearchInput').value || '').trim().toLowerCase();
+  const el = document.getElementById('hideResults');
+  const all = state.otherUsers;
+  const filtered = q ? all.filter(u=>u.name.toLowerCase().includes(q)) : all;
+  if(!filtered.length){
+    el.innerHTML = '<div class="empty-hint">कोई contact नहीं मिला</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(u=>{
+    const checked = state.storyDraft.hiddenFrom.includes(u.id);
+    return `
+    <div class="list-row" style="cursor:pointer;" onclick="toggleHideUser('${u.id}')">
+      <div class="avatar" style="background:${u.color}">${initials(u.name)}</div>
+      <div class="row-main">
+        <div class="row-title">${u.name}</div>
+        <div class="row-sub">${u.bio}</div>
+      </div>
+      <div style="font-size:18px; flex:0 0 auto;">${checked ? '✅' : '⬜'}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHideUser(id){
+  const idx = state.storyDraft.hiddenFrom.indexOf(id);
+  if(idx >= 0) state.storyDraft.hiddenFrom.splice(idx,1);
+  else state.storyDraft.hiddenFrom.push(id);
+  renderHideResults();
+}
+
+function renderHideRow(){
+  const wrap = document.getElementById('hideRowWrap');
+  const n = state.storyDraft.hiddenFrom.length;
+  wrap.innerHTML = `
+    <div class="settings-row" style="cursor:pointer;" onclick="openHideSearch()">
+      <div>👁 Hide from${n ? ` (${n} selected)` : ' — कोई नहीं'}<div class="desc">चुने गए contacts को यह story नहीं दिखेगी</div></div>
+      <span>→</span>
+    </div>`;
+}
+
+/* ---- Post ---- */
+function postStory(){
+  const d = state.storyDraft;
+  state.stories.splice(1, 0, {
+    name: state.profile.name,
+    mine: false,
+    seen: false,
+    uid: 'mystory_' + Date.now(),
+    filterCss: d.filterCss,
+    caption: d.caption,
+    song: d.song,
+    hiddenFrom: d.hiddenFrom.slice()
+  });
+  state.myStories.unshift({ caption: d.caption, filterCss: d.filterCss, song: d.song, time: 'अभी' });
+  const hiddenNote = d.hiddenFrom.length ? ` (${d.hiddenFrom.length} contacts से hidden)` : '';
+  toast('✅ Story post हो गई' + hiddenNote);
+  navigate('home');
+}
+
+function closeVideoPlayer(){
+  document.getElementById('videoOverlay').classList.remove('show');
+  document.getElementById('videoPlayerWrap').innerHTML = '';
+}
+
+/* ---------------- CHATS ---------------- */
+/* ---------------- REAL-TIME CHAT (Firestore) ---------------- */
+function chatIdFor(a,b){ return [a,b].sort().join('_'); }
+
+var _chatsUnsub = null;
+function subscribeChats(){
+  if(!auth.currentUser) return;
+  if(_chatsUnsub) _chatsUnsub();
+  _chatsUnsub = db.collection('chats')
+    .where('participants','array-contains', auth.currentUser.uid)
+    .onSnapshot(snap=>{
+      snap.docChanges().forEach(change=>{
+        const id = change.doc.id;
+        const d = change.doc.data();
+        const myUid = auth.currentUser.uid;
+        const otherUid = (d.participants||[]).find(p=>p!==myUid);
+        if(change.type === 'removed'){
+          state.chats = state.chats.filter(c=>c.id!==id);
+          return;
+        }
+        let c = state.chats.find(x=>x.id===id);
+        const name = (d.names && d.names[otherUid]) || 'User';
+        const color = (d.colors && d.colors[otherUid]) || '#3DDC97';
+        const lastTime = d.lastMessageAt && d.lastMessageAt.toDate ? d.lastMessageAt.toDate().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'}) : '';
+        const orderMs = d.lastMessageAt && d.lastMessageAt.toMillis ? d.lastMessageAt.toMillis() : 0;
+        if(!c){
+          c = { id, uid:otherUid, name, color, last:d.lastMessage||'', time:lastTime, locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[], _order:orderMs };
+          state.chats.push(c);
+        } else {
+          c.name = name; c.color = color; c.last = d.lastMessage || c.last; c.time = lastTime || c.time; c._order = orderMs;
+        }
+      });
+      state.chats.sort((a,b)=> (b._order||0) - (a._order||0));
+      if(state.currentScreen==='chats') renderChats();
+      if(state.currentScreen==='search') renderSearch();
+    }, err=>{ /* silent - chat list just won't live-update */ });
+}
+
+function renderChats(){
+  const el = document.getElementById('chatsList');
+  if(state.chats.length===0){ el.innerHTML = '<div class="empty-hint">अभी कोई chat नहीं है — किसी contact की profile खोल कर Message पर टैप करें।</div>'; return; }
+  el.innerHTML = state.chats.map(c=>`
+    <div class="list-row">
+      <div class="avatar" onclick="openOtherProfile('${c.uid}','chats')" style="background:${c.color};cursor:pointer;">${initials(c.name)}</div>
+      <div class="row-main" onclick="openChat('${c.id}')" style="cursor:pointer;">
+        <div class="row-title">${c.name} ${c.locked?'<span class="badge-locked">🔒 LOCKED</span>':''}</div>
+        <div class="row-sub ${c.locked?'blur':''}">${c.locked ? '•••••••••••' : c.last}</div>
+      </div>
+      <div class="row-time">${c.time}</div>
+      <button class="lock-btn ${c.locked?'on':''}" onclick="event.stopPropagation(); handleLockToggle('${c.id}','chat')">${c.locked?'🔒':'🔓'}</button>
+    </div>`).join('');
+}
+
+function renderGroups(){
+  const el = document.getElementById('groupsList');
+  if(state.groups.length===0){ el.innerHTML = '<div class="empty-hint">अभी कोई group नहीं</div>'; return; }
+  el.innerHTML = state.groups.map(g=>`
+    <div class="list-row">
+      <div class="group-avatars">
+        <div class="avatar" style="background:#3DDC97">${initials(g.name)[0]}</div>
+        <div class="avatar" style="background:#F2B84B">${initials(g.name)[1]||'+'}</div>
+      </div>
+      <div class="row-main">
+        <div class="row-title">${g.name} ${g.locked?'<span class="badge-locked">🔒 LOCKED</span>':''}</div>
+        <div class="row-sub ${g.locked?'blur':''}">${g.locked ? '•••••••••' : g.last}</div>
+      </div>
+      <div class="row-time">${g.time}</div>
+      <button class="lock-btn ${g.locked?'on':''}" onclick="handleLockToggle('${g.id}','group')">${g.locked?'🔒':'🔓'}</button>
+    </div>`).join('');
+}
+
+const DIRECTORY_COLORS = ['#3DDC97','#F2B84B','#E5484D','#7C8A9A','#1E90A0'];
+async function loadDirectoryUsers(){
+  if(!auth.currentUser) return;
+  try{
+    const snap = await db.collection('accounts').where('role','==','user').get();
+    let i = 0;
+    snap.forEach(doc=>{
+      if(doc.id === auth.currentUser.uid) return; // don't list yourself
+      const d = doc.data();
+      if(!d || !d.name) return;
+      const existing = state.otherUsers.find(u=>u.id===doc.id);
+      const color = DIRECTORY_COLORS[i++ % DIRECTORY_COLORS.length];
+      if(existing){
+        existing.name = d.name; existing.email = d.email||''; existing.phone = d.phone||'';
+      } else {
+        state.otherUsers.push({
+          id: doc.id, name: d.name, color, bio: d.email||'', email: d.email||'', phone: d.phone||'',
+          birthday: '', following:false, followers:0
+        });
+      }
+    });
+  } catch(e){
+    // silent fail — local demo contacts still work for search
+  }
+  if(state.currentScreen==='search') renderSearch();
+}
+
+function renderSearch(){
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const el = document.getElementById('searchResults');
+  if(!q){ el.innerHTML = '<div class="empty-hint">Chats, groups या contacts search करने के लिए टाइप करें</div>'; return; }
+
+  const chatMatches = state.chats.filter(c=>c.name.toLowerCase().includes(q));
+  const groupMatches = state.groups.filter(g=>g.name.toLowerCase().includes(q));
+  const userMatches = state.otherUsers.filter(u=>
+    u.name.toLowerCase().includes(q) ||
+    (u.email && u.email.toLowerCase().includes(q)) ||
+    (u.phone && u.phone.includes(q))
+  );
+
+  if(chatMatches.length===0 && groupMatches.length===0 && userMatches.length===0){
+    el.innerHTML = '<div class="empty-hint">कोई result नहीं मिला</div>';
+    return;
+  }
+
+  const card = (name, sub, color, onclick, locked) => `
+    <div class="search-card" onclick="${onclick}">
+      <div class="search-thumb" style="background:linear-gradient(160deg, ${color}, #0B0F14)">
+        ${initials(name)}
+        <div class="search-play">▶</div>
+        ${locked ? '<div class="search-locked">🔒</div>' : ''}
+      </div>
+      <div class="search-meta">
+        <div class="search-name">${name}</div>
+        <div class="search-sub">${sub}</div>
+      </div>
+    </div>`;
+
+  let html = '';
+  if(chatMatches.length){
+    html += `<div class="search-section-label">Chats</div><div class="search-grid">` +
+      chatMatches.map(c=>card(c.name, c.locked ? 'Locked chat' : c.last, c.color, `openChat('${c.id}')`, c.locked)).join('') +
+      `</div>`;
+  }
+  if(groupMatches.length){
+    html += `<div class="search-section-label">Groups</div><div class="search-grid">` +
+      groupMatches.map(g=>card(g.name, g.members, '#3DDC97', `navigate('groups')`, g.locked)).join('') +
+      `</div>`;
+  }
+  if(userMatches.length){
+    html += `<div class="search-section-label">Contacts</div><div class="search-grid">` +
+      userMatches.map(u=>card(u.name, u.bio, u.color, `openOtherProfile('${u.id}','search')`, false)).join('') +
+      `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderSettings(){
+  document.getElementById('settingsProfileAvatar').style.background = state.profile.color;
+  document.getElementById('settingsProfileAvatar').textContent = initials(state.profile.name);
+  document.getElementById('settingsProfileName').textContent = state.profile.name;
+  document.getElementById('lockMethodVal').textContent = state.lockMethod==='pin'?'PIN':(state.lockMethod==='pattern'?'Pattern':'Face ID');
+  document.getElementById('lockMethodDesc').textContent = 'App खोलते समय यह method चलेगा';
+  document.getElementById('settEmailCurrent').textContent = state.profile.email || 'Set nahi kiya gaya';
+  updatePermissionUI();
+  const lockedOnes = [...state.chats, ...state.groups].filter(x=>x.locked);
+  const summary = document.getElementById('lockedChatsSummary');
+  if(lockedOnes.length===0){
+    summary.innerHTML = '<div class="settings-row"><div class="desc">अभी कोई chat locked नहीं है</div></div>';
+  } else {
+    summary.innerHTML = lockedOnes.map(x=>`<div class="settings-row"><div>${x.name}<div class="desc">${x.attempts}/5 galat attempts</div></div><span style="color:var(--amber)">🔒</span></div>`).join('');
+  }
+}
+
+/* ---------------- REAL CALLS (direct WebRTC + Firestore signaling) ----------------
+   Koi third-party call server nahi — seedha browser-to-browser (peer-to-peer)
+   WebRTC connection banate hain. Firestore ka use sirf "signaling" ke liye hota
+   hai: offer/answer SDP aur ICE candidates exchange karne ke liye, aur "ringing"
+   ka real-time signal bhejne ke liye. Isse clear audio/video milta hai aur
+   koi login-wall/third-party limit nahi aati. */
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
+
+let pc = null;
+let localStream = null;
+let callType = 'audio';
+let activeCallDocId = null;
+let activeCallUnsub = null;
+let _candidatesUnsub = null;
+let isMuted = false;
+
+async function getLocalMedia(type){
+  const constraints = {
+    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+    video: type==='video' ? { width:{ideal:480}, height:{ideal:640} } : false
+  };
+  return navigator.mediaDevices.getUserMedia(constraints);
+}
+
+function setupPeerConnection(callId, role){
+  pc = new RTCPeerConnection(RTC_CONFIG);
+  const remoteVideo = document.getElementById('remoteMedia');
+  const remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+  pc.ontrack = (e)=>{ e.streams[0].getTracks().forEach(t=>remoteStream.addTrack(t)); };
+
+  localStream.getTracks().forEach(t=>pc.addTrack(t, localStream));
+
+  const myCandidatesCol = role==='caller' ? 'callerCandidates' : 'calleeCandidates';
+  const theirCandidatesCol = role==='caller' ? 'calleeCandidates' : 'callerCandidates';
+
+  pc.onicecandidate = (e)=>{
+    if(e.candidate){
+      db.collection('calls').doc(callId).collection(myCandidatesCol).add(e.candidate.toJSON()).catch(()=>{});
+    }
+  };
+
+  if(_candidatesUnsub) _candidatesUnsub();
+  _candidatesUnsub = db.collection('calls').doc(callId).collection(theirCandidatesCol).onSnapshot(snap=>{
+    snap.docChanges().forEach(change=>{
+      if(change.type==='added' && pc){
+        pc.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(()=>{});
+      }
+    });
+  });
+
+  return pc;
+}
+
+function showActiveCallUI(){
+  document.getElementById('localVideo').srcObject = localStream;
+  document.getElementById('localVideo').style.display = callType==='video' ? 'block' : 'none';
+  if(callType==='video'){
+    document.getElementById('callWaitingUI').style.display = 'none';
+    document.getElementById('callMediaContainer').style.display = 'block';
+  } else {
+    // audio call: remoteMedia video element stays hidden inside callMediaContainer
+    // lekin DOM mein rehta hai isliye audio playback chalta rehta hai
+    document.getElementById('callMediaContainer').style.display = 'none';
+  }
+}
+
+function toggleMute(){
+  if(!localStream) return;
+  isMuted = !isMuted;
+  localStream.getAudioTracks().forEach(t=> t.enabled = !isMuted);
+  const label = isMuted ? '🔇' : '🎙️';
+  const b1 = document.getElementById('muteBtn'); if(b1) b1.textContent = label;
+  const b2 = document.getElementById('muteBtnVideo'); if(b2) b2.textContent = label;
+}
+
+function callFromChat(type){
+  const c = state.chats.find(x=>x.id===state.activeChatId);
+  if(!c || !c.uid) return;
+  startCallReal(c.uid, c.name, c.color, type);
+}
+
+async function startCallReal(otherUid, otherName, otherColor, type){
+  if(!auth.currentUser) return;
+  callType = type;
+  isMuted = false;
+  document.getElementById('callAvatar').textContent = initials(otherName);
+  document.getElementById('callName').textContent = otherName;
+  document.getElementById('callStatusTxt').textContent = 'Calling…';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  document.getElementById('callMediaContainer').style.display = 'none';
+  state.callBackTo = 'chats';
+  navigate('call');
+
+  try{
+    localStream = await getLocalMedia(type);
+  }catch(e){
+    toast('❌ Camera/Mic access नहीं मिला: ' + e.message, true);
+    navigate(state.callBackTo || 'chats');
+    return;
+  }
+
+  const callRef = db.collection('calls').doc();
+  activeCallDocId = callRef.id;
+  setupPeerConnection(callRef.id, 'caller');
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await callRef.set({
+    from: auth.currentUser.uid, fromName: state.profile.name,
+    to: otherUid, toName: otherName, type,
+    status: 'ringing',
+    offer: { type: offer.type, sdp: offer.sdp },
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  if(activeCallUnsub) activeCallUnsub();
+  activeCallUnsub = callRef.onSnapshot(async snap=>{
+    const d = snap.data();
+    if(!d) return;
+    if(d.answer && pc && !pc.currentRemoteDescription){
+      await pc.setRemoteDescription(new RTCSessionDescription(d.answer));
+      document.getElementById('callStatusTxt').textContent = 'Connected';
+      showActiveCallUI();
+    } else if(d.status === 'declined'){
+      toast('❌ ' + otherName + ' ने call decline कर दी', true);
+      endCallCleanup();
+    } else if(d.status === 'ended'){
+      endCallCleanup();
+    }
+  });
+}
+
+function hangupCall(){
+  if(activeCallDocId){
+    db.collection('calls').doc(activeCallDocId).set({ status:'ended' }, { merge:true }).catch(()=>{});
+  }
+  endCallCleanup();
+}
+
+function endCallCleanup(){
+  if(pc){ try{ pc.close(); }catch(e){} pc = null; }
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
+  if(activeCallUnsub){ activeCallUnsub(); activeCallUnsub = null; }
+  if(_candidatesUnsub){ _candidatesUnsub(); _candidatesUnsub = null; }
+  activeCallDocId = null;
+  const remoteVideo = document.getElementById('remoteMedia');
+  if(remoteVideo) remoteVideo.srcObject = null;
+  const localVideo = document.getElementById('localVideo');
+  if(localVideo) localVideo.srcObject = null;
+  document.getElementById('callMediaContainer').style.display = 'none';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  navigate(state.callBackTo || 'chats');
+}
+
+/* ---- Receiving calls: listen for any 'ringing' call addressed to me ---- */
+var _incomingCallsUnsub = null;
+let incomingCall = null;
+function subscribeIncomingCalls(){
+  if(!auth.currentUser) return;
+  if(_incomingCallsUnsub) _incomingCallsUnsub();
+  _incomingCallsUnsub = db.collection('calls')
+    .where('to','==', auth.currentUser.uid)
+    .where('status','==','ringing')
+    .onSnapshot(snap=>{
+      snap.docChanges().forEach(change=>{
+        if(change.type==='added'){
+          const d = change.doc.data();
+          incomingCall = { id: change.doc.id, ...d };
+          showIncomingCallModal(incomingCall);
+        }
+        if(change.type==='removed' || (change.type==='modified' && change.doc.data().status!=='ringing')){
+          if(incomingCall && incomingCall.id===change.doc.id) hideIncomingCallModal();
+        }
+      });
+    }, err=>{ /* silent */ });
+}
+
+function showIncomingCallModal(call){
+  document.getElementById('incomingCallAvatar').textContent = initials(call.fromName||'?');
+  document.getElementById('incomingCallName').textContent = call.fromName || 'Unknown';
+  document.getElementById('incomingCallType').textContent = (call.type==='video'?'📹 Incoming video call…':'📞 Incoming audio call…');
+  document.getElementById('incomingCallOverlay').classList.add('active');
+}
+function hideIncomingCallModal(){
+  document.getElementById('incomingCallOverlay').classList.remove('active');
+  incomingCall = null;
+}
+
+async function acceptIncomingCall(){
+  if(!incomingCall) return;
+  const call = incomingCall;
+  hideIncomingCallModal();
+  callType = call.type;
+  isMuted = false;
+
+  document.getElementById('callAvatar').textContent = initials(call.fromName||'?');
+  document.getElementById('callName').textContent = call.fromName || 'Unknown';
+  document.getElementById('callStatusTxt').textContent = 'Connecting…';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  document.getElementById('callMediaContainer').style.display = 'none';
+  activeCallDocId = call.id;
+  state.callBackTo = 'chats';
+  navigate('call');
+
+  try{
+    localStream = await getLocalMedia(call.type);
+  }catch(e){
+    toast('❌ Camera/Mic access नहीं मिला: ' + e.message, true);
+    await db.collection('calls').doc(call.id).set({ status:'declined' }, { merge:true });
+    navigate(state.callBackTo || 'chats');
+    return;
+  }
+
+  const callRef = db.collection('calls').doc(call.id);
+  setupPeerConnection(call.id, 'callee');
+
+  await pc.setRemoteDescription(new RTCSessionDescription(call.offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await callRef.set({ status:'accepted', answer: { type:answer.type, sdp:answer.sdp } }, { merge:true });
+
+  document.getElementById('callStatusTxt').textContent = 'Connected';
+  showActiveCallUI();
+
+  if(activeCallUnsub) activeCallUnsub();
+  activeCallUnsub = callRef.onSnapshot(snap=>{
+    const d = snap.data();
+    if(d && d.status==='ended') endCallCleanup();
+  });
+}
+
+function declineIncomingCall(){
+  if(!incomingCall) return;
+  db.collection('calls').doc(incomingCall.id).set({ status:'declined' }, { merge:true }).catch(()=>{});
+  hideIncomingCallModal();
+}
+
+/* ---------------- LOCK TOGGLE (list level) ---------------- */
+function findItem(id){ return state.chats.find(c=>c.id===id) || state.groups.find(g=>g.id===id); }
+
+function handleLockToggle(id, kind){
+  const item = findItem(id);
+  if(!item.locked){
+    openModal({type:'set-pin', id, kind});
+  } else {
+    openModal({type:'unlock-to-remove', id, kind});
+  }
+}
+
+/* ---------------- CHAT DETAIL (real-time messages) ---------------- */
+function openChat(id){
+  let c = state.chats.find(x=>x.id===id);
+  if(c && c.locked && !c.unlockedThisSession){
+    openModal({type:'unlock-open', id, kind:'chat'});
+    return;
+  }
+  openChatDetailView(id);
+}
+
+var _msgsUnsub = null;
+function openChatDetailView(id){
+  let c = state.chats.find(x=>x.id===id);
+  if(!c){
+    // chat doc exists in Firestore but our local list hasn't caught up yet — build a placeholder
+    c = { id, uid:null, name:'User', color:'#3DDC97', last:'', time:'', locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[] };
+    state.chats.push(c);
+  }
+  state.activeChatId = id;
+  document.getElementById('cdAvatar').style.background = c.color;
+  document.getElementById('cdAvatar').textContent = initials(c.name);
+  document.getElementById('cdName').textContent = c.name;
+  document.getElementById('cdLockBtn').textContent = c.locked ? '🔒' : '🔓';
+  document.getElementById('cdLockBtn').className = 'lock-btn' + (c.locked?' on':'');
+  navigate('chatdetail');
+
+  if(_msgsUnsub) _msgsUnsub();
+  _msgsUnsub = db.collection('chats').doc(id).collection('messages')
+    .orderBy('createdAt','asc')
+    .onSnapshot(snap=>{
+      c.messages = snap.docs.map(d=>{
+        const m = d.data();
+        return { from: m.from===auth.currentUser.uid ? 'out' : 'in', text: m.text };
+      });
+      if(state.activeChatId===id) renderMsgs(c);
+    }, err=>{ /* silent */ });
+}
+
+function renderMsgs(c){
+  document.getElementById('cdMsgs').innerHTML = c.messages.map(m=>`<div class="msg ${m.from}">${m.text}</div>`).join('');
+  const wrap = document.getElementById('cdMsgs');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function sendDemoMessage(){
+  const input = document.getElementById('cdInput');
+  const txt = input.value.trim();
+  if(!txt || !state.activeChatId || !auth.currentUser) return;
+  input.value='';
+  const chatRef = db.collection('chats').doc(state.activeChatId);
+  await chatRef.collection('messages').add({
+    from: auth.currentUser.uid, text: txt, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await chatRef.set({ lastMessage: txt, lastMessageAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+}
+
+function toggleLockFromDetail(){
+  handleLockToggle(state.activeChatId, 'chat');
+}
+
+// Actually deletes all messages in Firestore for this chat (server-side),
+// so the "delete" is permanent and won't come back via onSnapshot.
+async function deleteChatMessagesFromServer(chatId){
+  try{
+    const msgsRef = db.collection('chats').doc(chatId).collection('messages');
+    let snap = await msgsRef.limit(400).get();
+    while(!snap.empty){
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      snap = await msgsRef.limit(400).get();
+    }
+    await db.collection('chats').doc(chatId).set({
+      lastMessage: '⚠️ Chat delete कर दी गई',
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+  } catch(e){
+    console.error('deleteChatMessagesFromServer failed:', e);
+    toast('❌ Server से messages delete नहीं हो पाए: ' + e.message, true);
+  }
+}
+
+/* ---------------- MODAL (PIN set / unlock / remove / change app pin) ---------------- */
+function openModal(ctx){
+  state.modalCtx = ctx;
+  state.currentInput = '';
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.add('active');
+  const title = document.getElementById('modalTitle');
+  const sub = document.getElementById('modalSub');
+  const warn = document.getElementById('modalWarn');
+  warn.textContent = '';
+
+  if(ctx.type==='set-pin'){
+    title.textContent = 'Chat Lock सेट करें';
+    sub.textContent = 'इस chat के लिए एक नया 4-digit PIN बनाएं';
+  } else if(ctx.type==='unlock-open'){
+    const item = findItem(ctx.id);
+    title.textContent = item.name + ' — Locked';
+    sub.textContent = 'खोलने के लिए PIN डालें';
+    if(item.attempts>0) warn.textContent = `${item.attempts}/5 galat attempts. ${5-item.attempts} attempt बचे हैं।`;
+  } else if(ctx.type==='unlock-to-remove'){
+    title.textContent = 'Lock हटाएं';
+    sub.textContent = 'Lock हटाने के लिए मौजूदा PIN डालें';
+  } else if(ctx.type==='change-app-pin'){
+    title.textContent = 'नया App PIN';
+    sub.textContent = 'App खोलने के लिए नया 4-digit PIN डालें';
+  }
+  renderPinDots('modalPinDots', 0);
+  buildNumpad('modalNumpad', onModalPinKey);
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('active');
+  state.modalCtx = null;
+  state.currentInput = '';
+}
+
+function onModalPinKey(k){
+  if(k==='⌫'){ state.currentInput = state.currentInput.slice(0,-1); renderPinDots('modalPinDots', state.currentInput.length); return; }
+  if(state.currentInput.length>=4) return;
+  state.currentInput += k;
+  renderPinDots('modalPinDots', state.currentInput.length);
+  if(state.currentInput.length===4) processModalPin();
+}
+
+function processModalPin(){
+  const ctx = state.modalCtx;
+  const pin = state.currentInput;
+  const warn = document.getElementById('modalWarn');
+
+  if(ctx.type==='set-pin'){
+    const item = findItem(ctx.id);
+    item.locked = true; item.pin = pin; item.attempts = 0; item.unlockedThisSession=false;
+    toast('🔒 Chat lock सेट हो गया');
+    closeModal();
+    refreshCurrentList();
+    return;
+  }
+
+  if(ctx.type==='change-app-pin'){
+    state.appPin = pin;
+    toast('✅ App PIN बदल दिया गया');
+    closeModal();
+    return;
+  }
+
+  // unlock-open or unlock-to-remove: verify against item.pin
+  const item = findItem(ctx.id);
+  if(pin === item.pin){
+    item.attempts = 0;
+    if(ctx.type==='unlock-to-remove'){
+      item.locked = false; item.pin = null;
+      toast('🔓 Lock हटा दिया गया');
+    } else {
+      item.unlockedThisSession = true;
+      toast('🔓 Unlocked');
+      closeModal();
+      if(ctx.kind==='chat') openChatDetailView(ctx.id);
+      refreshCurrentList();
+      return;
+    }
+    closeModal();
+    refreshCurrentList();
+  } else {
+    item.attempts += 1;
+    state.currentInput='';
+    if(item.attempts >= 5){
+      // DELETE the chat/group messages — actually remove from Firestore, not just local memory
+      if(ctx.kind==='chat'){
+        item.messages = [];
+        item.last = '⚠️ Chat delete कर दी गई';
+        item.locked = false; item.pin = null; item.attempts = 0; item.unlockedThisSession=false;
+        deleteChatMessagesFromServer(item.id);
+      } else {
+        item.last = '⚠️ Group data delete कर दिया गया';
+        item.locked = false; item.pin = null; item.attempts = 0;
+        deleteChatMessagesFromServer(item.id);
+      }
+      warn.textContent = '';
+      closeModal();
+      toast('🗑️ 5 गलत PIN — यह chat delete कर दी गई है', true);
+      refreshCurrentList();
+    } else {
+      renderPinDots('modalPinDots', 4, true);
+      warn.textContent = `❌ गलत PIN — ${item.attempts}/5 attempts इस्तेमाल हो गए`;
+      warn.className = 'attempts-warn' + (item.attempts>=3?' danger':'');
+      setTimeout(()=>{ state.currentInput=''; renderPinDots('modalPinDots',0); }, 500);
+    }
+  }
+}
+
+function refreshCurrentList(){
+  if(state.currentScreen==='chats') renderChats();
+  if(state.currentScreen==='groups') renderGroups();
+  if(state.currentScreen==='settings') renderSettings();
+}
+
+function openChangeAppPin(){
+  openModal({type:'change-app-pin'});
+}
+
+/* ---------------- INIT ---------------- */
+setLockMethod('pin');
+
+// live clock
+function tick(){
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+tick(); setInterval(tick, 30000);
+</script>
+</body>
+</html>
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
