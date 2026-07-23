@@ -417,6 +417,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Jitsi Meet — free, no API key needed, used for real audio/video calls -->
+<script src="https://meet.jit.si/external_api.js"></script>
 </head>
 <body>
 
@@ -943,14 +945,26 @@
 
   <!-- CALL SCREEN -->
   <div class="screen" id="screen-call">
-    <div class="content">
+    <div class="content" id="callWaitingUI">
       <div class="call-avatar-big" id="callAvatar"></div>
       <div class="call-name" id="callName"></div>
       <div class="call-status" id="callStatusTxt">Calling…</div>
       <div class="call-controls">
-        <button class="ctrlbtn">🔇</button>
-        <button class="ctrlbtn end" onclick="navigate(state.callBackTo || 'chats')">📵</button>
-        <button class="ctrlbtn">🔊</button>
+        <button class="ctrlbtn end" onclick="hangupCall()">📵</button>
+      </div>
+    </div>
+    <div id="jitsiCallContainer" style="display:none; position:absolute; inset:0;"></div>
+  </div>
+
+  <!-- MODAL: Incoming Call -->
+  <div class="modal-overlay" id="incomingCallOverlay">
+    <div class="modal-sheet" style="text-align:center;">
+      <div class="call-avatar-big" id="incomingCallAvatar" style="margin:0 auto 14px;"></div>
+      <div class="modal-title" id="incomingCallName"></div>
+      <div class="modal-sub" id="incomingCallType">Incoming audio call…</div>
+      <div style="display:flex; gap:14px; margin-top:26px;">
+        <button class="btn-primary" style="background:var(--danger); flex:1;" onclick="declineIncomingCall()">✕ Decline</button>
+        <button class="btn-primary" style="flex:1;" onclick="acceptIncomingCall()">📞 Accept</button>
       </div>
     </div>
   </div>
@@ -1261,10 +1275,15 @@ function enterUserApp(accountData){
   state.newLockPinStage = null;
   setLockMethod('pin');
   loadDirectoryUsers();
+  if(typeof subscribeChats === 'function') subscribeChats();
+  if(typeof subscribeIncomingCalls === 'function') subscribeIncomingCalls();
 }
 
 function logoutToAuth(){
   if(auth.currentUser){ auth.signOut(); }
+  if(typeof _chatsUnsub !== 'undefined' && _chatsUnsub){ _chatsUnsub(); _chatsUnsub = null; }
+  if(typeof _incomingCallsUnsub !== 'undefined' && _incomingCallsUnsub){ _incomingCallsUnsub(); _incomingCallsUnsub = null; }
+  if(typeof _msgsUnsub !== 'undefined' && _msgsUnsub){ _msgsUnsub(); _msgsUnsub = null; }
   document.getElementById('phone').style.display='none';
   document.getElementById('authGate').style.display='block';
   backToChooser();
@@ -2063,15 +2082,16 @@ function toggleFollow(){
   }
 }
 
-function messageUser(){
+async function messageUser(){
   const u = state.otherUsers.find(x=>x.id===state.activeOtherProfileId);
-  if(!u) return;
-  let c = state.chats.find(x=>x.uid===u.id);
-  if(!c){
-    c = { id:'c_'+u.id, uid:u.id, name:u.name, color:u.color, last:'', time:'Now', locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[] };
-    state.chats.push(c);
-  }
-  openChat(c.id);
+  if(!u || !auth.currentUser) return;
+  const chatId = chatIdFor(auth.currentUser.uid, u.id);
+  await db.collection('chats').doc(chatId).set({
+    participants: [auth.currentUser.uid, u.id],
+    names: { [auth.currentUser.uid]: state.profile.name, [u.id]: u.name },
+    colors: { [auth.currentUser.uid]: state.profile.color, [u.id]: u.color }
+  }, { merge:true });
+  openChat(chatId);
 }
 
 /* ---------------- PROFILE ---------------- */
@@ -2771,9 +2791,46 @@ function closeVideoPlayer(){
 }
 
 /* ---------------- CHATS ---------------- */
+/* ---------------- REAL-TIME CHAT (Firestore) ---------------- */
+function chatIdFor(a,b){ return [a,b].sort().join('_'); }
+
+var _chatsUnsub = null;
+function subscribeChats(){
+  if(!auth.currentUser) return;
+  if(_chatsUnsub) _chatsUnsub();
+  _chatsUnsub = db.collection('chats')
+    .where('participants','array-contains', auth.currentUser.uid)
+    .onSnapshot(snap=>{
+      snap.docChanges().forEach(change=>{
+        const id = change.doc.id;
+        const d = change.doc.data();
+        const myUid = auth.currentUser.uid;
+        const otherUid = (d.participants||[]).find(p=>p!==myUid);
+        if(change.type === 'removed'){
+          state.chats = state.chats.filter(c=>c.id!==id);
+          return;
+        }
+        let c = state.chats.find(x=>x.id===id);
+        const name = (d.names && d.names[otherUid]) || 'User';
+        const color = (d.colors && d.colors[otherUid]) || '#3DDC97';
+        const lastTime = d.lastMessageAt && d.lastMessageAt.toDate ? d.lastMessageAt.toDate().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'}) : '';
+        const orderMs = d.lastMessageAt && d.lastMessageAt.toMillis ? d.lastMessageAt.toMillis() : 0;
+        if(!c){
+          c = { id, uid:otherUid, name, color, last:d.lastMessage||'', time:lastTime, locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[], _order:orderMs };
+          state.chats.push(c);
+        } else {
+          c.name = name; c.color = color; c.last = d.lastMessage || c.last; c.time = lastTime || c.time; c._order = orderMs;
+        }
+      });
+      state.chats.sort((a,b)=> (b._order||0) - (a._order||0));
+      if(state.currentScreen==='chats') renderChats();
+      if(state.currentScreen==='search') renderSearch();
+    }, err=>{ /* silent - chat list just won't live-update */ });
+}
+
 function renderChats(){
   const el = document.getElementById('chatsList');
-  if(state.chats.length===0){ el.innerHTML = '<div class="empty-hint">कोई chat नहीं बची — सभी locked chats delete हो चुकी हैं।</div>'; return; }
+  if(state.chats.length===0){ el.innerHTML = '<div class="empty-hint">अभी कोई chat नहीं है — किसी contact की profile खोल कर Message पर टैप करें।</div>'; return; }
   el.innerHTML = state.chats.map(c=>`
     <div class="list-row">
       <div class="avatar" onclick="openOtherProfile('${c.uid}','chats')" style="background:${c.color};cursor:pointer;">${initials(c.name)}</div>
@@ -2898,18 +2955,147 @@ function renderSettings(){
   }
 }
 
-function startCall(name,type,backTo){
-  document.getElementById('callAvatar').textContent = initials(name);
-  document.getElementById('callName').textContent = name;
-  document.getElementById('callStatusTxt').textContent = type==='video' ? 'Video call…' : 'Calling…';
-  state.callBackTo = backTo || 'chats';
-  navigate('call');
-}
+/* ---------------- REAL CALLS (Jitsi Meet + Firestore signaling) ----------------
+   Jitsi Meet free/public server use hoti hai (koi API key/signup nahi chahiye,
+   isliye static GitHub Pages site par bhi kaam karta hai). Firestore 'calls'
+   collection sirf "ringing" ka signal bhejne ke liye use hoti hai taaki doosra
+   user real-time mein incoming call dekh sake aur dono same room mein jud sakein. */
+let jitsiApi = null;
+let activeCallDocId = null;
+let activeCallUnsub = null;
 
 function callFromChat(type){
   const c = state.chats.find(x=>x.id===state.activeChatId);
-  if(!c) return;
-  startCall(c.name, type, 'chatdetail');
+  if(!c || !c.uid) return;
+  startCallReal(c.uid, c.name, c.color, type);
+}
+
+async function startCallReal(otherUid, otherName, otherColor, type){
+  if(!auth.currentUser) return;
+  document.getElementById('callAvatar').textContent = initials(otherName);
+  document.getElementById('callName').textContent = otherName;
+  document.getElementById('callStatusTxt').textContent = 'Calling…';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  document.getElementById('jitsiCallContainer').style.display = 'none';
+  state.callBackTo = 'chats';
+  navigate('call');
+
+  const room = 'kavach_' + chatIdFor(auth.currentUser.uid, otherUid) + '_' + Date.now();
+  const callDoc = await db.collection('calls').add({
+    from: auth.currentUser.uid, fromName: state.profile.name,
+    to: otherUid, toName: otherName, type, room,
+    status: 'ringing', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  activeCallDocId = callDoc.id;
+
+  if(activeCallUnsub) activeCallUnsub();
+  activeCallUnsub = callDoc.onSnapshot(snap=>{
+    const d = snap.data();
+    if(!d) return;
+    if(d.status === 'accepted'){
+      document.getElementById('callStatusTxt').textContent = 'Connected';
+      joinJitsiRoom(room, type, otherName);
+    } else if(d.status === 'declined'){
+      toast('❌ ' + otherName + ' ने call decline कर दी', true);
+      endCallCleanup();
+    } else if(d.status === 'ended'){
+      endCallCleanup();
+    }
+  });
+}
+
+function joinJitsiRoom(room, type, otherName){
+  document.getElementById('callWaitingUI').style.display = 'none';
+  const container = document.getElementById('jitsiCallContainer');
+  container.style.display = 'block';
+  container.innerHTML = '';
+  jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
+    roomName: room,
+    parentNode: container,
+    width: '100%', height: '100%',
+    userInfo: { displayName: state.profile.name },
+    configOverwrite: { startWithVideoMuted: type !== 'video', prejoinPageEnabled: false },
+    interfaceConfigOverwrite: { TOOLBAR_BUTTONS: ['microphone','camera','hangup','tileview','chat'] }
+  });
+  jitsiApi.addEventListener('videoConferenceLeft', ()=>{ hangupCall(); });
+}
+
+function hangupCall(){
+  if(activeCallDocId){
+    db.collection('calls').doc(activeCallDocId).set({ status:'ended' }, { merge:true }).catch(()=>{});
+  }
+  endCallCleanup();
+}
+
+function endCallCleanup(){
+  if(jitsiApi){ try{ jitsiApi.dispose(); }catch(e){} jitsiApi = null; }
+  if(activeCallUnsub){ activeCallUnsub(); activeCallUnsub = null; }
+  activeCallDocId = null;
+  document.getElementById('jitsiCallContainer').innerHTML = '';
+  document.getElementById('jitsiCallContainer').style.display = 'none';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  navigate(state.callBackTo || 'chats');
+}
+
+/* ---- Receiving calls: listen for any 'ringing' call addressed to me ---- */
+var _incomingCallsUnsub = null;
+let incomingCall = null;
+function subscribeIncomingCalls(){
+  if(!auth.currentUser) return;
+  if(_incomingCallsUnsub) _incomingCallsUnsub();
+  _incomingCallsUnsub = db.collection('calls')
+    .where('to','==', auth.currentUser.uid)
+    .where('status','==','ringing')
+    .onSnapshot(snap=>{
+      snap.docChanges().forEach(change=>{
+        if(change.type==='added'){
+          const d = change.doc.data();
+          incomingCall = { id: change.doc.id, ...d };
+          showIncomingCallModal(incomingCall);
+        }
+        if(change.type==='removed' || (change.type==='modified' && change.doc.data().status!=='ringing')){
+          if(incomingCall && incomingCall.id===change.doc.id) hideIncomingCallModal();
+        }
+      });
+    }, err=>{ /* silent */ });
+}
+
+function showIncomingCallModal(call){
+  document.getElementById('incomingCallAvatar').textContent = initials(call.fromName||'?');
+  document.getElementById('incomingCallName').textContent = call.fromName || 'Unknown';
+  document.getElementById('incomingCallType').textContent = (call.type==='video'?'📹 Incoming video call…':'📞 Incoming audio call…');
+  document.getElementById('incomingCallOverlay').classList.add('active');
+}
+function hideIncomingCallModal(){
+  document.getElementById('incomingCallOverlay').classList.remove('active');
+  incomingCall = null;
+}
+
+async function acceptIncomingCall(){
+  if(!incomingCall) return;
+  const call = incomingCall;
+  hideIncomingCallModal();
+  await db.collection('calls').doc(call.id).set({ status:'accepted' }, { merge:true });
+  document.getElementById('callAvatar').textContent = initials(call.fromName||'?');
+  document.getElementById('callName').textContent = call.fromName || 'Unknown';
+  document.getElementById('callStatusTxt').textContent = 'Connected';
+  document.getElementById('callWaitingUI').style.display = 'flex';
+  document.getElementById('jitsiCallContainer').style.display = 'none';
+  activeCallDocId = call.id;
+  state.callBackTo = 'chats';
+  navigate('call');
+  if(activeCallUnsub) activeCallUnsub();
+  activeCallUnsub = db.collection('calls').doc(call.id).onSnapshot(snap=>{
+    const d = snap.data();
+    if(d && d.status==='ended') endCallCleanup();
+  });
+  joinJitsiRoom(call.room, call.type, call.fromName);
+}
+
+function declineIncomingCall(){
+  if(!incomingCall) return;
+  db.collection('calls').doc(incomingCall.id).set({ status:'declined' }, { merge:true }).catch(()=>{});
+  hideIncomingCallModal();
 }
 
 /* ---------------- LOCK TOGGLE (list level) ---------------- */
@@ -2924,41 +3110,60 @@ function handleLockToggle(id, kind){
   }
 }
 
-/* ---------------- CHAT DETAIL ---------------- */
+/* ---------------- CHAT DETAIL (real-time messages) ---------------- */
 function openChat(id){
-  const c = state.chats.find(x=>x.id===id);
-  if(c.locked && !c.unlockedThisSession){
+  let c = state.chats.find(x=>x.id===id);
+  if(c && c.locked && !c.unlockedThisSession){
     openModal({type:'unlock-open', id, kind:'chat'});
     return;
   }
   openChatDetailView(id);
 }
 
+var _msgsUnsub = null;
 function openChatDetailView(id){
-  const c = state.chats.find(x=>x.id===id);
+  let c = state.chats.find(x=>x.id===id);
+  if(!c){
+    // chat doc exists in Firestore but our local list hasn't caught up yet — build a placeholder
+    c = { id, uid:null, name:'User', color:'#3DDC97', last:'', time:'', locked:false, pin:null, attempts:0, unlockedThisSession:false, messages:[] };
+    state.chats.push(c);
+  }
   state.activeChatId = id;
   document.getElementById('cdAvatar').style.background = c.color;
   document.getElementById('cdAvatar').textContent = initials(c.name);
   document.getElementById('cdName').textContent = c.name;
   document.getElementById('cdLockBtn').textContent = c.locked ? '🔒' : '🔓';
   document.getElementById('cdLockBtn').className = 'lock-btn' + (c.locked?' on':'');
-  renderMsgs(c);
   navigate('chatdetail');
+
+  if(_msgsUnsub) _msgsUnsub();
+  _msgsUnsub = db.collection('chats').doc(id).collection('messages')
+    .orderBy('createdAt','asc')
+    .onSnapshot(snap=>{
+      c.messages = snap.docs.map(d=>{
+        const m = d.data();
+        return { from: m.from===auth.currentUser.uid ? 'out' : 'in', text: m.text };
+      });
+      if(state.activeChatId===id) renderMsgs(c);
+    }, err=>{ /* silent */ });
 }
 
 function renderMsgs(c){
   document.getElementById('cdMsgs').innerHTML = c.messages.map(m=>`<div class="msg ${m.from}">${m.text}</div>`).join('');
+  const wrap = document.getElementById('cdMsgs');
+  wrap.scrollTop = wrap.scrollHeight;
 }
 
-function sendDemoMessage(){
+async function sendDemoMessage(){
   const input = document.getElementById('cdInput');
   const txt = input.value.trim();
-  if(!txt) return;
-  const c = state.chats.find(x=>x.id===state.activeChatId);
-  c.messages.push({from:'out', text:txt});
-  c.last = txt; c.time='Now';
+  if(!txt || !state.activeChatId || !auth.currentUser) return;
   input.value='';
-  renderMsgs(c);
+  const chatRef = db.collection('chats').doc(state.activeChatId);
+  await chatRef.collection('messages').add({
+    from: auth.currentUser.uid, text: txt, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await chatRef.set({ lastMessage: txt, lastMessageAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
 }
 
 function toggleLockFromDetail(){
